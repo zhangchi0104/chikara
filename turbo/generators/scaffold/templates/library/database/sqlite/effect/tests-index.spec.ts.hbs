@@ -1,0 +1,12 @@
+import { describe, expect, it } from "@effect/vitest";
+import { getTableName } from "drizzle-orm";
+import { Effect } from "effect";
+import { users } from "../src/schema.ts";
+
+describe("{{ packageName }}", () => {
+  it.effect("defines the users table", () =>
+    Effect.sync(() => {
+      expect(getTableName(users)).toBe("users");
+    }),
+  );
+});

@@ -1,0 +1,12 @@
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
+import { greet } from "../src/index.ts";
+
+describe("{{ packageName }}", () => {
+  it.effect("greet returns a hello message", () =>
+    Effect.gen(function* () {
+      const result = yield* greet("world");
+      expect(result).toBe("Hello, world!");
+    }),
+  );
+});
