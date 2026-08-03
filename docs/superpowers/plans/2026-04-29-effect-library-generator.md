@@ -19,9 +19,9 @@
 
 The spec listed several items to confirm during implementation. Resolved by inspecting the repo:
 
-- **npm scope:** `@repo/` (from `packages/typescript-config/package.json` and `packages/biome-config/package.json`).
+- **npm scope:** `@repo/` (from `configs/typescript-config/package.json` and `configs/biome-config/package.json`).
 - **TypeScript config to extend:** `@repo/typescript-config/tsconfig.base.json`. The `tsconfig.tsc.json` is just a fragment (`module: NodeNext`); the generated package will set its `module` directly.
-- **Biome:** `packages/biome-config` currently has only a `package.json` shell — no shared config exists yet. The generated package will run biome via `bunx biome check .` against its own files. If a shared biome config is added later it can be wired in by editing the template.
+- **Biome:** `configs/biome-config` currently has only a `package.json` shell — no shared config exists yet. The generated package will run biome via `bunx biome check .` against its own files. If a shared biome config is added later it can be wired in by editing the template.
 - **Test runner:** `bun test` (built-in). The catalog contains no vitest; `tsconfig.base.json` has `"types": ["bun"]`; bun discovers `*.spec.ts` automatically.
 - **`exports` field shape:** No existing library precedent in this repo. Use the standard dual entry pattern: `"exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } }`.
 - **Workspace catalog reference syntax in bun:** `"effect": "catalog:"` (bun reads the named entry from the root `workspaces.catalog`).

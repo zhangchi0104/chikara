@@ -56,11 +56,11 @@ packages/<name>/
   - `biome`: catalog reference (if biome is run per-package; otherwise inherit from root)
   - test runner: catalog reference if present
 
-The exact dependency style and `exports` field shape must match the existing `packages/typescript-config/package.json` and `packages/biome-config/package.json` conventions.
+The exact dependency style and `exports` field shape must match the existing `configs/typescript-config/package.json` and `configs/biome-config/package.json` conventions.
 
 ### `tsconfig.json`
 
-Extends `@astat/typescript-config/tsconfig.base.json` (or the equivalent name used by the existing `packages/typescript-config` package). Sets:
+Extends `@astat/typescript-config/tsconfig.base.json` (or the equivalent name used by the existing `configs/typescript-config` package). Sets:
 
 - `compilerOptions.outDir`: `"dist"`
 - `compilerOptions.rootDir`: `"src"`
@@ -143,7 +143,7 @@ A run of `turbo gen effect` followed by entering a fresh package name produces a
 
 These items are deliberately left open because answering them requires inspecting other files in the repo that may have changed since this design was written. The implementation plan should resolve each one before writing templates:
 
-- The exact npm scope used by existing packages (`@astat/<name>`? unscoped? something else?). Inspect `packages/typescript-config/package.json` and `packages/biome-config/package.json`.
+- The exact npm scope used by existing packages (`@astat/<name>`? unscoped? something else?). Inspect `configs/typescript-config/package.json` and `configs/biome-config/package.json`.
 - The exact filename of the typescript config to extend (`tsconfig.base.json` vs `tsconfig.tsc.json` vs `tsconfig.bundled.json` — three are present).
 - Whether biome is run from each package or from the root (affects whether `biome` belongs in the package's devDependencies).
 - The test runner in use (vitest expected, but confirm via root `package.json` and any existing test files).

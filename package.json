@@ -24,7 +24,8 @@
     "packages": [
       "apps/*",
       "packages/*",
-      "hooks/*"
+      "hooks/*",
+      "configs/*"
     ],
     "catalog": {
       "typescript": "^7.0.2",

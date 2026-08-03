@@ -11,14 +11,14 @@
         "typescript": "catalog:",
       },
     },
-    "packages/biome-config": {
+    "configs/biome-config": {
       "name": "@repo/biome-config",
       "version": "1.0.0",
       "devDependencies": {
         "@biomejs/biome": "catalog:",
       },
     },
-    "packages/typescript-config": {
+    "configs/typescript-config": {
       "name": "@repo/typescript-config",
       "version": "1.0.0",
     },
@@ -138,9 +138,9 @@
 
     "@inquirer/type": ["@inquirer/type@3.0.10", "", { "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-BvziSRxfz5Ov8ch0z/n3oijRSEcEsHnhggm4xFZe93DHcUCTlutlq9Ox4SVENAfcRD22UQq7T/atg9Wr3k09eA=="],
 
-    "@repo/biome-config": ["@repo/biome-config@workspace:packages/biome-config"],
+    "@repo/biome-config": ["@repo/biome-config@workspace:configs/biome-config"],
 
-    "@repo/typescript-config": ["@repo/typescript-config@workspace:packages/typescript-config"],
+    "@repo/typescript-config": ["@repo/typescript-config@workspace:configs/typescript-config"],
 
     "@turbo/darwin-64": ["@turbo/darwin-64@2.10.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-/c9cSBRermWDv85oufLhoH6XRLOVbvzJLRd+WLyfJCP+i0HFLQj4PVNDrHcY17/ve5l8X0Oua4bJBqJUgJPnZA=="],
 

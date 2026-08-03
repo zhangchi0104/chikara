@@ -6,7 +6,7 @@ for scaffolding apps, libraries, and Drizzle database packages.
 
 ## What's Included
 
-- Bun workspaces for `apps/*`, `packages/*`, and `hooks/*`.
+- Bun workspaces for `apps/*`, `packages/*`, `hooks/*`, and `configs/*`.
 - Turborepo tasks for `build`, `dev`, `lint`, and `check-types`.
 - Shared TypeScript configs in `@repo/typescript-config`.
 - Shared Biome config in `@repo/biome-config`.
@@ -17,7 +17,7 @@ for scaffolding apps, libraries, and Drizzle database packages.
 
 ```txt
 .
-├── packages/
+├── configs/
 │   ├── biome-config/         # Shared Biome config package
 │   └── typescript-config/    # Shared TypeScript config package
 ├── turbo/
