@@ -7,6 +7,8 @@
     "lint": "turbo run lint",
     "check": "biome check .",
     "check-types": "turbo run check-types",
+    "test:e2e": "maestro test apps/Chikara/.maestro",
+    "test:e2e:watch": "maestro test --continuous apps/Chikara/.maestro",
     "new:app": "turbo gen scaffold --args app",
     "new:lib": "turbo gen scaffold --args library"
   },

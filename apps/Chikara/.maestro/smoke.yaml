@@ -1,0 +1,19 @@
+appId: com.zhangchi0104.chikara
+name: Chikara smoke test
+tags:
+  - smoke
+---
+- launchApp
+- assertVisible: "Welcome to.*Expo"
+- tapOn: Explore
+- assertVisible: This starter app includes example code to help you get started.
+- scrollUntilVisible:
+    element:
+      text: ".*File-based routing"
+    direction: DOWN
+- tapOn: ".*File-based routing"
+- scrollUntilVisible:
+    element:
+      text: "This app has two screens:.*"
+    direction: DOWN
+- assertVisible: "This app has two screens:.*"
