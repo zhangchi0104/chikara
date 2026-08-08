@@ -1,0 +1,22 @@
+import { describe, expect, test } from "bun:test";
+import { createApp } from "../src/app.ts";
+
+describe("{{ serviceName }}", () => {
+  const app = createApp("postgres://chikara:chikra@localhost:5432/chikara");
+
+  test("reports liveness without querying the database", async () => {
+    const response = await app.request("/health");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok" });
+  });
+
+  test("identifies the service", async () => {
+    const response = await app.request("/");
+
+    expect(await response.json()).toEqual({
+      service: "{{ serviceName }}",
+      status: "ok",
+    });
+  });
+});

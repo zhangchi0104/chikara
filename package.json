@@ -10,10 +10,13 @@
     "test:e2e": "maestro test apps/Chikara/.maestro",
     "test:e2e:watch": "maestro test --continuous apps/Chikara/.maestro",
     "new:app": "turbo gen scaffold --args app",
-    "new:lib": "turbo gen scaffold --args library"
+    "new:lib": "turbo gen scaffold --args library",
+    "new:service": "turbo gen service"
   },
   "devDependencies": {
+    "@biomejs/biome": "catalog:",
     "@turbo/gen": "^2.10.7",
+    "@types/bun": "catalog:",
     "turbo": "^2.10.7",
     "typescript": "catalog:"
   },
@@ -26,6 +29,7 @@
       "apps/*",
       "packages/*",
       "hooks/*",
+      "services/*",
       "configs/*"
     ],
     "catalog": {
@@ -37,6 +41,7 @@
       "@effect/sql-pg": "4.0.0-beta.102",
       "drizzle-orm": "1.0.0-rc.4",
       "drizzle-kit": "1.0.0-rc.4",
+      "hono": "^4.13.0",
       "@types/bun": "^1.3.14",
       "vitest": "^4.1.10"
     }

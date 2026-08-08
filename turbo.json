@@ -15,7 +15,13 @@
     },
     "dev": {
       "cache": false,
+      "dependsOn": ["@chikara/infrastructure#dev"],
       "persistent": true
+    },
+    "@chikara/infrastructure#dev": {
+      "cache": false,
+      "dependsOn": [],
+      "persistent": false
     }
   }
 }

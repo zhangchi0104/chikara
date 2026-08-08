@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["./configs/biome-config/biome.json"],
+  "files": {
+    "includes": [
+      "package.json",
+      "turbo.json",
+      "turbo/**/*.ts",
+      "turbo/**/*.json",
+      "configs/biome-config/biome.json",
+      "services/**/*.json"
+    ]
+  }
+}

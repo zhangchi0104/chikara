@@ -1,0 +1,33 @@
+name: {{ serviceName }}
+
+services:
+  api:
+    image: chikara/{{ serviceName }}:dev
+    build:
+      context: "{{ rootRelativePath }}"
+      dockerfile: "{{ packagePath }}/Dockerfile"
+      target: development
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://chikara:chikra@postgres:5432/chikara}"
+      PORT: "3000"
+    volumes:
+      - ./src:/workspace/{{ packagePath }}/src:ro
+    networks:
+      - gateway
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "${TRAEFIK_NETWORK:-chikara-gateway}"
+      traefik.http.routers.{{ serviceName }}.entrypoints: web
+      traefik.http.routers.{{ serviceName }}.rule: "Host(`{{ serviceName }}.localhost`)"
+      traefik.http.routers.{{ serviceName }}.service: {{ serviceName }}
+      traefik.http.services.{{ serviceName }}.loadbalancer.server.port: "3000"
+    healthcheck:
+      test: [CMD, bun, -e, "const response = await fetch('http://127.0.0.1:3000/health'); if (!response.ok) process.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+networks:
+  gateway:
+    external: true
+    name: "${TRAEFIK_NETWORK:-chikara-gateway}"

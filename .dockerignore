@@ -1,0 +1,6 @@
+.git
+**/.expo
+**/.turbo
+**/dist
+**/node_modules
+apps/Chikara/ios

@@ -2,11 +2,13 @@
 
 A Bun-first Turborepo template for TypeScript workspaces. It ships shared
 TypeScript and Biome configuration packages plus a custom Turborepo generator
-for scaffolding apps, libraries, and Drizzle database packages.
+for scaffolding apps, libraries, Drizzle database packages, and backend
+services.
 
 ## What's Included
 
-- Bun workspaces for `apps/*`, `packages/*`, `hooks/*`, and `configs/*`.
+- Bun workspaces for `apps/*`, `packages/*`, `hooks/*`, `services/*`, and
+  `configs/*`.
 - Turborepo tasks for `build`, `dev`, `lint`, and `check-types`.
 - Shared TypeScript configs in `@repo/typescript-config`.
 - Shared Biome config in `@repo/biome-config`.
@@ -20,6 +22,8 @@ for scaffolding apps, libraries, and Drizzle database packages.
 ├── configs/
 │   ├── biome-config/         # Shared Biome config package
 │   └── typescript-config/    # Shared TypeScript config package
+├── services/
+│   └── infrastructure/       # Traefik, PostgreSQL, and MinIO for local development
 ├── turbo/
 │   └── generators/           # Turborepo generator source, tests, and templates
 ├── docs/superpowers/         # Design notes and implementation plans
@@ -32,6 +36,7 @@ Generated projects are created in:
 
 - `apps/<name>` for applications
 - `packages/<name>` for libraries and database packages
+- `services/<name>` for Hono and Drizzle services
 
 ## Requirements
 
@@ -67,14 +72,24 @@ Use the custom Turborepo generator:
 bunx turbo gen scaffold
 ```
 
+Or create a service directly:
+
+```sh
+bun run new:service
+```
+
 The generator prompts for:
 
-- project type: library or app
+- project type: library, app, or service
 - library kind: blank or Drizzle database
 - database engine: PostgreSQL or SQLite
-- app framework: Bun, Hono, Elysia, Nitro, or Astro
-- whether to include Effect
+- app framework: Bun, TUI, Hono, Elysia, Nitro, or Astro
+- whether apps and libraries include Effect
 - package metadata
+
+Services use a fixed Bun stack: Hono, Drizzle ORM, and PostgreSQL. Each service
+includes a development Docker image and Compose labels that register it with
+the shared Traefik instance at `http://<service>.localhost:8081`.
 
 Blank libraries and Bun apps are generated entirely from local templates.
 Hono, Elysia, Nitro, and Astro apps shell out to their official create commands,
@@ -92,20 +107,22 @@ project shape:
 
 ```txt
 app/bun/{effect,plain}
+service/hono
 library/blank/{effect,plain}
 library/database/{postgresql,sqlite}/{effect,plain}
 ```
 
 Database library templates include Drizzle configuration, schema/client files,
 and a Drizzle re-export module. SQLite templates also include a starter
-`src/queries.ts`.
+`src/queries.ts`. Service templates include Hono routes, PostgreSQL schema and
+migration configuration, Docker packaging, and Traefik registration.
 
 ## Testing
 
 Run the generator tests with Bun:
 
 ```sh
-bun test turbo/generators/scaffold/index.test.ts
+bun test turbo/generators/scaffold
 ```
 
 The tests cover prompt behavior, template selection, app create commands, and
