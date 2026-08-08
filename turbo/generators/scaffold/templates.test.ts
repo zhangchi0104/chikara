@@ -190,8 +190,13 @@ describe("Hono service template", () => {
     expect(pkg).toContain('"drizzle-orm": "catalog:"');
     expect(pkg).toContain('"test": "bun test"');
     expect(app).toContain('import { Hono } from "hono";');
+    expect(app).toContain('import { db } from "./db.ts";');
+    expect(app).not.toContain("createDb");
     expect(app).toContain('app.get("/health"');
     expect(db).toContain('from "drizzle-orm/bun-sql"');
+    expect(db).toContain("export const db = drizzle(");
+    expect(db).toContain("process.env.DATABASE_URL");
+    expect(db).not.toContain("createDb");
     expect(config).toContain('dialect: "postgresql"');
   });
 

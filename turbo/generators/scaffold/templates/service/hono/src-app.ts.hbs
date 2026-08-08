@@ -1,14 +1,9 @@
 import { Hono } from "hono";
-import { createDb } from "./db.ts";
+import { db } from "./db.ts";
 import { items } from "./schema.ts";
 
-const DEFAULT_DATABASE_URL = "postgres://chikara:chikra@localhost:5432/chikara";
-
-export function createApp(
-  databaseUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
-): Hono {
+export function createApp(): Hono {
   const app = new Hono();
-  const db = createDb(databaseUrl);
 
   app.get("/", (context) =>
     context.json({ service: "{{ serviceName }}", status: "ok" }),

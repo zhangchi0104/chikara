@@ -1,5 +1,7 @@
 import { drizzle } from "drizzle-orm/bun-sql";
 
-export const createDb = (url: string) => drizzle(url);
+const DEFAULT_DATABASE_URL = "postgres://chikara:chikra@localhost:5432/chikara";
 
-export type Db = ReturnType<typeof createDb>;
+export const db = drizzle(process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL);
+
+export type Db = typeof db;

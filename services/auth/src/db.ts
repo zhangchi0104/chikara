@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/bun-sql";
+import { drizzle } from "drizzle-orm/node-postgres";
 
-export const createDb = (url: string) => drizzle(url);
 
-export type Db = ReturnType<typeof createDb>;
+export const db = drizzle(process.env.AUTH_DATABASE_URL!);
+export type Db = typeof db

@@ -18,8 +18,10 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "better-auth": "^1.6.26",
     "drizzle-orm": "catalog:",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
