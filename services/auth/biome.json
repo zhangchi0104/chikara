@@ -1,7 +1,15 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
   "extends": ["@repo/biome-config/biome.json"],
   "files": {
-    "includes": ["src/**", "tests/**", "*.json", "*.ts"]
+    "includes": [
+      "src/**",
+      "tests/**",
+      "*.json",
+      "*.jsonc",
+      "*.ts",
+      "!worker-configuration.d.ts"
+    ]
   }
 }

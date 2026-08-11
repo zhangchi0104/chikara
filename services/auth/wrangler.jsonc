@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "auth",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "AUTH_DB",
+      "database_name": "chikara-auth",
+      // Replace this placeholder with the ID returned by:
+      // bunx wrangler d1 create chikara-auth
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "preview_database_id": "chikara-auth-local",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

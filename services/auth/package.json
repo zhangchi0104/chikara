@@ -1,34 +1,38 @@
 {
   "name": "@chikara/auth",
   "version": "0.0.1",
-  "description": "auth service",
+  "description": "Chikara OAuth 2.1 authorization server",
   "author": "Alex Zhang",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun build ./src/index.ts --target bun --outdir ./dist",
-    "start": "bun src/index.ts",
-    "dev": "docker compose up --build",
-    "dev:local": "bun --watch src/index.ts",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface AuthCloudflareBindings",
+    "db:generate": "node ./node_modules/.bin/auth generate --config ./scripts/auth-schema.ts --output ./auth-schema.sql --yes",
+    "db:migrate:local": "wrangler d1 migrations apply chikara-auth --local",
+    "db:migrate:remote": "wrangler d1 migrations apply chikara-auth --remote",
     "check": "biome check . && tsc --noEmit",
-    "test": "bun test",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "test": "vitest run",
+    "prepare": "effect-tsgo patch"
   },
   "dependencies": {
-    "better-auth": "^1.6.26",
-    "drizzle-orm": "catalog:",
-    "hono": "catalog:",
-    "pg": "^8.22.0"
+    "@better-auth/oauth-provider": "1.6.26",
+    "better-auth": "1.6.26",
+    "effect": "catalog:",
+    "hono": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@effect/tsgo": "catalog:",
+    "@effect/vitest": "catalog:",
     "@repo/biome-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/bun": "catalog:",
-    "drizzle-kit": "catalog:",
-    "typescript": "catalog:"
+    "@types/node": "catalog:",
+    "auth": "1.6.26",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   }
 }

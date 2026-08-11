@@ -19,11 +19,13 @@ services.
 
 ```txt
 .
+├── apps/
+│   └── Chikara/              # Expo application
 ├── configs/
 │   ├── biome-config/         # Shared Biome config package
 │   └── typescript-config/    # Shared TypeScript config package
 ├── services/
-│   └── infrastructure/       # Traefik, PostgreSQL, and MinIO for local development
+│   └── auth/                 # Better Auth OAuth 2.1 Worker backed by D1
 ├── turbo/
 │   └── generators/           # Turborepo generator source, tests, and templates
 ├── docs/superpowers/         # Design notes and implementation plans
@@ -42,12 +44,36 @@ Generated projects are created in:
 
 - Bun `1.3.14` or newer compatible with the lockfile
 - Node.js `20`, `22`, or `24+` (required by Vitest 4)
+- A Cloudflare account for remote D1 and Worker deployment
 
 Install dependencies:
 
 ```sh
 bun install
 ```
+
+For local auth development, copy `services/auth/.dev.vars.example` to
+`services/auth/.dev.vars`, replace the secret, then initialize the local D1
+database and start the Worker:
+
+```sh
+bun run migrate
+bun run --cwd services/auth dev
+```
+
+Before remote deployment, create the D1 database and put its returned ID into
+`services/auth/wrangler.jsonc`:
+
+```sh
+bunx wrangler d1 create chikara-auth
+cd services/auth
+bunx wrangler secret put BETTER_AUTH_SECRET
+bun run db:migrate:remote
+```
+
+Set `BETTER_AUTH_URL` and optional trusted origins as Worker environment values
+for the deployed environment. The OAuth/OIDC issuer is
+`$BETTER_AUTH_URL/api/auth`; PKCE authorization-code clients use `S256`.
 
 ## Scripts
 
@@ -58,6 +84,7 @@ bun run build
 bun run dev
 bun run lint
 bun run check-types
+bun run migrate
 bun run format
 ```
 

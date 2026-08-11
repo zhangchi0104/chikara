@@ -1,9 +1,10 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "./db.js"; // your drizzle instance
+import { createAuthOptions } from "./auth-options.js";
+import { type AuthBindings, readAuthConfig } from "./configs/auth.config.js";
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg", // or "mysql", "sqlite"
-  }),
-});
+export function createAuth(bindings: AuthBindings) {
+  return betterAuth({
+    ...createAuthOptions(readAuthConfig(bindings)),
+    database: bindings.AUTH_DB,
+  });
+}

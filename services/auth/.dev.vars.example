@@ -1,0 +1,4 @@
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+BETTER_AUTH_URL=http://localhost:8787
+AUTH_TRUSTED_ORIGINS=http://localhost:8787,chikara://
+AUTH_ALLOW_DYNAMIC_CLIENT_REGISTRATION=false

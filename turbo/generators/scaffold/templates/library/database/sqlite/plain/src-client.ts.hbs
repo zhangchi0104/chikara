@@ -1,7 +1,7 @@
 import { Database as BunDatabase } from "bun:sqlite";
 import { defineRelations } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import * as schema from "./schema.ts";
+import * as schema from "./schema.js";
 
 const relations = defineRelations(schema);
 

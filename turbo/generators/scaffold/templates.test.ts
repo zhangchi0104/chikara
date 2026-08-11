@@ -207,6 +207,7 @@ describe("Hono Cloudflare Worker service template", () => {
     expect(app).toContain('import { Hono } from "hono";');
     expect(app).toContain("Effect.runPromise");
     expect(app).toContain('app.get("/health"');
+    expect(entrypoint).toContain('import { app } from "./app.js";');
     expect(entrypoint).toContain("export default app;");
     expect(entrypoint).not.toContain("hostname");
   });

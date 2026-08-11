@@ -5,8 +5,8 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"],
-      "env": ["AUTH_*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["AUTH_*", "BETTER_AUTH_*"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -16,14 +16,8 @@
     },
     "dev": {
       "cache": false,
-      "dependsOn": ["@chikara/infrastructure#dev"],
       "persistent": true,
-      "env": ["AUTH_*"]
-    },
-    "@chikara/infrastructure#dev": {
-      "cache": false,
-      "dependsOn": [],
-      "persistent": false
+      "env": ["AUTH_*", "BETTER_AUTH_*"]
     }
   }
 }

@@ -1,4 +1,6 @@
 .git
+**/.env
+**/.impeccable
 **/.expo
 **/.turbo
 **/dist
