@@ -36,7 +36,7 @@ Generated projects are created in:
 
 - `apps/<name>` for applications
 - `packages/<name>` for libraries and database packages
-- `services/<name>` for Hono and Drizzle services
+- `services/<name>` for Hono Cloudflare Worker services using Effect v4
 
 ## Requirements
 
@@ -84,12 +84,13 @@ The generator prompts for:
 - library kind: blank or Drizzle database
 - database engine: PostgreSQL or SQLite
 - app framework: Bun, TUI, Hono, Elysia, Nitro, or Astro
-- whether apps and libraries include Effect
+- whether apps and libraries include Effect; services always use Effect v4
 - package metadata
 
-Services use a fixed Bun stack: Hono, Drizzle ORM, and PostgreSQL. Each service
-includes a development Docker image and Compose labels that register it with
-the shared Traefik instance at `http://<service>.localhost:8081`.
+Services use a fixed edge stack: Hono, Cloudflare Workers, Wrangler, and Effect
+v4. Wrangler provides local development, a dry-run production bundle, binding
+type generation, and deployment. The generated Worker exports the Hono app in
+module format and includes Effect-aware Vitest coverage.
 
 Blank libraries and Bun apps are generated entirely from local templates.
 Hono, Elysia, Nitro, and Astro apps shell out to their official create commands,
@@ -114,8 +115,9 @@ library/database/{postgresql,sqlite}/{effect,plain}
 
 Database library templates include Drizzle configuration, schema/client files,
 and a Drizzle re-export module. SQLite templates also include a starter
-`src/queries.ts`. Service templates include Hono routes, PostgreSQL schema and
-migration configuration, Docker packaging, and Traefik registration.
+`src/queries.ts`. Service templates include Hono routes, an Effect v4 handler,
+Vitest coverage, and a `wrangler.jsonc` compatibility date pinned to
+`2026-08-10`.
 
 ## Testing
 
@@ -125,8 +127,8 @@ Run the generator tests with Bun:
 bun test turbo/generators/scaffold
 ```
 
-The tests cover prompt behavior, template selection, app create commands, and
-Effect patch helpers.
+The tests cover prompt behavior, template selection, app create commands,
+Effect integration, and Worker/Wrangler configuration.
 
 ## Shared Packages
 

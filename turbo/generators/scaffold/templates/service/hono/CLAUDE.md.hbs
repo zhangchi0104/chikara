@@ -1,20 +1,32 @@
 # @chikara/{{ packageName }}
 
-{{#if description}}{{ description }}{{else}}A Hono service backed by Drizzle and PostgreSQL.{{/if}}
+{{#if description}}{{ description }}{{else}}An Effect v4 Hono service deployed as a Cloudflare Worker.{{/if}}
+
+<!-- effect-solutions:start -->
+## Effect Best Practices
+
+**IMPORTANT:** Always consult effect-solutions before writing Effect code.
+
+1. Run `effect-solutions list` to see available guides
+2. Run `effect-solutions show <topic>...` for relevant patterns (supports multiple topics)
+3. Search `~/.local/share/effect-solutions/effect` for real implementations
+
+Topics: quick-start, project-setup, tsconfig, basics, services-and-layers, data-modeling, error-handling, config, testing.
+
+Never guess at Effect patterns - check the guide first.
+<!-- effect-solutions:end -->
 
 ## Development flow
 
-`bun run dev` builds the development container, joins the shared
-`chikara-gateway` network, and registers `http://{{ serviceName }}.localhost:8081`
-with Traefik. Start `@chikara/infrastructure` first when running this package
-outside the root Turborepo task. Use `bun run dev:local` only when Docker routing
-is unnecessary.
+`bun run dev` starts the Worker locally with Wrangler. Use `bun run build` to
+bundle without deploying, `bun run deploy` to publish, and `bun run cf-typegen`
+after changing bindings in `wrangler.jsonc`.
 
 ## Service boundaries
 
-- Keep `/health` independent of PostgreSQL so container liveness remains useful
-  during database outages.
-- Define tables in `src/schema.ts`; generate and review a migration before
-  applying it.
-- Read runtime configuration from `PORT` and `DATABASE_URL`. Docker Compose also
-  accepts `TRAEFIK_NETWORK` when the shared network uses a non-default name.
+- Keep the default export in `src/index.ts` compatible with the Workers module
+  format.
+- Express request work as Effect programs and run them at the Hono handler
+  boundary.
+- Define Worker bindings in `wrangler.jsonc`, regenerate their types, and pass
+  `CloudflareBindings` to Hono when the service starts using bindings.

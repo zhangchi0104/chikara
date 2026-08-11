@@ -4,7 +4,6 @@ import {
   getServicePrompts,
   normalizeScaffoldPath,
   packageNameFromScaffoldPath,
-  rootRelativePathFromScaffoldPath,
   serviceNameFromScaffoldPath,
 } from "./index.ts";
 
@@ -108,16 +107,13 @@ describe("scaffold prompts and paths", () => {
     );
   });
 
-  it("derives package, service, and Docker-context paths", () => {
+  it("derives package and Worker service names", () => {
     expect(packageNameFromScaffoldPath("services/billing-api/")).toBe(
       "billing-api",
     );
     expect(serviceNameFromScaffoldPath("services/billing-api")).toBe(
       "billing-api",
     );
-    expect(
-      rootRelativePathFromScaffoldPath("/repo", "services/billing-api"),
-    ).toBe("../..");
   });
 
   it("normalizes root-relative paths", () => {

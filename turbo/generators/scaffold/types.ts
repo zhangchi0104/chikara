@@ -14,7 +14,6 @@ export interface ScaffoldAnswers {
   packageName: string;
   packagePath?: string;
   serviceName?: string;
-  rootRelativePath?: string;
   description: string;
   author: string;
 }

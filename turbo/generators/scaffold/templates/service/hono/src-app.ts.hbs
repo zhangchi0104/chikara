@@ -1,17 +1,15 @@
+import { Effect } from "effect";
 import { Hono } from "hono";
-import { db } from "./db.ts";
-import { items } from "./schema.ts";
 
 export function createApp(): Hono {
   const app = new Hono();
 
   app.get("/", (context) =>
-    context.json({ service: "{{ serviceName }}", status: "ok" }),
+    Effect.runPromise(
+      Effect.succeed({ service: "{{ serviceName }}", status: "ok" }),
+    ).then((body) => context.json(body)),
   );
   app.get("/health", (context) => context.json({ status: "ok" }));
-  app.get("/items", async (context) =>
-    context.json({ items: await db.select().from(items) }),
-  );
 
   return app;
 }

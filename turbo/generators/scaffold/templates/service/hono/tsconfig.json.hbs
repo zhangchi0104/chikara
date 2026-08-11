@@ -1,14 +1,17 @@
 {
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
   "extends": "@repo/typescript-config/tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "noEmit": true,
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "rootDir": "."
+    "rootDir": ".",
+    "types": [],
+    "plugins": [{ "name": "@effect/language-service" }]
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "worker-configuration.d.ts"],
   "exclude": ["dist", "node_modules"]
 }

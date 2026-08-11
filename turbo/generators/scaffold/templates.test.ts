@@ -151,8 +151,8 @@ describe("local scaffold templates", () => {
   });
 });
 
-describe("Hono service template", () => {
-  it("emits the complete local service scaffold", () => {
+describe("Hono Cloudflare Worker service template", () => {
+  it("emits the complete Worker scaffold", () => {
     const actions = buildScaffoldActions({ type: "service" });
     expectAllStartWith(
       templateFiles(actions),
@@ -161,67 +161,68 @@ describe("Hono service template", () => {
     expect(actionTypes(actions)).not.toContain("installWorkspace");
     for (const output of [
       "src/app.ts",
-      "src/db.ts",
-      "src/schema.ts",
       "tests/app.spec.ts",
-      "drizzle.config.ts",
-      "drizzle/.gitkeep",
-      "Dockerfile",
-      "compose.yaml",
+      "vitest.config.ts",
+      "wrangler.jsonc",
+      ".gitignore",
     ]) {
       expect(actionPaths(actions)).toContain(
         `{{ turbo.paths.root }}/{{ packagePath }}/${output}`,
       );
     }
+    for (const output of [
+      "src/db.ts",
+      "src/schema.ts",
+      "drizzle.config.ts",
+      "Dockerfile",
+      "compose.yaml",
+    ]) {
+      expect(actionPaths(actions)).not.toContain(
+        `{{ turbo.paths.root }}/{{ packagePath }}/${output}`,
+      );
+    }
   });
 
-  it("uses Hono, Drizzle, and PostgreSQL with runnable checks", () => {
+  it("uses Hono and Effect v4 with runnable checks", () => {
+    const biome = JSON.parse(
+      readFileSync(`${SERVICE_TEMPLATE_ROOT}/biome.json.hbs`, "utf8"),
+    ) as { root?: boolean };
     const pkg = readFileSync(
       `${SERVICE_TEMPLATE_ROOT}/package.json.hbs`,
       "utf8",
     );
     const app = readFileSync(`${SERVICE_TEMPLATE_ROOT}/src-app.ts.hbs`, "utf8");
-    const db = readFileSync(`${SERVICE_TEMPLATE_ROOT}/src-db.ts.hbs`, "utf8");
-    const config = readFileSync(
-      `${SERVICE_TEMPLATE_ROOT}/drizzle.config.ts.hbs`,
+    const entrypoint = readFileSync(
+      `${SERVICE_TEMPLATE_ROOT}/src-index.ts.hbs`,
       "utf8",
     );
     expect(pkg).toContain('"hono": "catalog:"');
-    expect(pkg).toContain('"drizzle-orm": "catalog:"');
-    expect(pkg).toContain('"test": "bun test"');
+    expect(pkg).toContain('"effect": "catalog:"');
+    expect(pkg).toContain('"@effect/vitest": "catalog:"');
+    expect(pkg).toContain('"wrangler": "catalog:"');
+    expect(pkg).toContain('"test": "vitest run"');
+    expect(pkg).toContain('"prepare": "effect-tsgo patch"');
+    expect(biome.root).toBeFalse();
+    expect(app).toContain('import { Effect } from "effect";');
     expect(app).toContain('import { Hono } from "hono";');
-    expect(app).toContain('import { db } from "./db.ts";');
-    expect(app).not.toContain("createDb");
+    expect(app).toContain("Effect.runPromise");
     expect(app).toContain('app.get("/health"');
-    expect(db).toContain('from "drizzle-orm/bun-sql"');
-    expect(db).toContain("export const db = drizzle(");
-    expect(db).toContain("process.env.DATABASE_URL");
-    expect(db).not.toContain("createDb");
-    expect(config).toContain('dialect: "postgresql"');
+    expect(entrypoint).toContain("export default app;");
+    expect(entrypoint).not.toContain("hostname");
   });
 
-  it("registers the container with Traefik on the shared network", () => {
-    const compose = readFileSync(
-      `${SERVICE_TEMPLATE_ROOT}/compose.yaml.hbs`,
+  it("configures Wrangler for a Cloudflare Worker", () => {
+    const config = readFileSync(
+      `${SERVICE_TEMPLATE_ROOT}/wrangler.jsonc.hbs`,
       "utf8",
     );
-    expect(compose).toContain('traefik.enable: "true"');
-    expect(compose).toContain("traefik.http.routers.{{ serviceName }}.rule");
-    expect(compose).toContain(
-      "traefik.http.services.{{ serviceName }}.loadbalancer.server.port",
-    );
-    expect(compose).toContain(`\${TRAEFIK_NETWORK:-chikara-gateway}`);
-    expect(compose).toContain("external: true");
-  });
-
-  it("builds from the workspace and serves the generated bundle", () => {
-    const dockerfile = readFileSync(
-      `${SERVICE_TEMPLATE_ROOT}/Dockerfile.hbs`,
+    const pkg = readFileSync(
+      `${SERVICE_TEMPLATE_ROOT}/package.json.hbs`,
       "utf8",
     );
-    expect(dockerfile).toContain("RUN bun install --frozen-lockfile");
-    expect(dockerfile).toContain("FROM dependencies AS development");
-    expect(dockerfile).toContain("FROM oven/bun:1.3.14 AS production");
-    expect(dockerfile).toContain('CMD ["bun", "dist/index.js"]');
+    expect(config).toContain('"name": "{{ serviceName }}"');
+    expect(config).toContain('"main": "src/index.ts"');
+    expect(config).toContain('"compatibility_date": "2026-08-10"');
+    expect(pkg).toContain('"build": "wrangler deploy --dry-run --outdir dist"');
   });
 });

@@ -30,6 +30,7 @@ export const expectAllStartWith = (paths: string[], prefix: string): void => {
 };
 
 export const EFFECT_PACKAGE_TEMPLATES = [
+  "turbo/generators/scaffold/templates/service/hono/package.json.hbs",
   "turbo/generators/scaffold/templates/app/bun/effect/package.json.hbs",
   "turbo/generators/scaffold/templates/app/tui/effect/package.json.hbs",
   "turbo/generators/scaffold/templates/library/blank/effect/package.json.hbs",
@@ -38,6 +39,7 @@ export const EFFECT_PACKAGE_TEMPLATES = [
 ] as const;
 
 export const EFFECT_TSCONFIG_TEMPLATES = [
+  "turbo/generators/scaffold/templates/service/hono/tsconfig.json.hbs",
   "turbo/generators/scaffold/templates/app/bun/effect/tsconfig.json.hbs",
   "turbo/generators/scaffold/templates/app/tui/effect/tsconfig.json.hbs",
   "turbo/generators/scaffold/templates/library/blank/effect/tsconfig.json.hbs",

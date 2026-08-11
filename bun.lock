@@ -92,6 +92,7 @@
     "hono": "^4.13.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10",
+    "wrangler": "^4.120.0",
   },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.5.0", "", {}, "sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q=="],

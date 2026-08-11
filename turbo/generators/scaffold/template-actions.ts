@@ -33,13 +33,10 @@ const DATABASE_SQLITE_EXTRA: ReadonlyArray<TemplateFile> = [
 
 const SERVICE_EXTRA_FILES: ReadonlyArray<TemplateFile> = [
   ["src-app.ts.hbs", "src/app.ts"],
-  ["src-db.ts.hbs", "src/db.ts"],
-  ["src-schema.ts.hbs", "src/schema.ts"],
   ["tests-app.spec.ts.hbs", "tests/app.spec.ts"],
-  ["drizzle.config.ts.hbs", "drizzle.config.ts"],
-  ["drizzle-gitkeep.hbs", "drizzle/.gitkeep"],
-  ["Dockerfile.hbs", "Dockerfile"],
-  ["compose.yaml.hbs", "compose.yaml"],
+  ["vitest.config.ts.hbs", "vitest.config.ts"],
+  ["wrangler.jsonc.hbs", "wrangler.jsonc"],
+  ["gitignore.hbs", ".gitignore"],
 ];
 
 const LIBRARY_FILES: ReadonlyArray<TemplateFile> = [

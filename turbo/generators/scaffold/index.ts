@@ -6,7 +6,6 @@ import { registerFrameworkActions } from "./app-actions.ts";
 import {
   normalizeScaffoldPath,
   packageNameFromScaffoldPath,
-  rootRelativePathFromScaffoldPath,
   serviceNameFromScaffoldPath,
 } from "./paths.ts";
 import { getScaffoldPrompts, getServicePrompts } from "./prompts.ts";
@@ -31,10 +30,6 @@ export function registerScaffoldGenerator(plop: PlopTypes.NodePlopAPI): void {
     );
     answers.packagePath = packagePath;
     answers.packageName = packageNameFromScaffoldPath(packagePath);
-    answers.rootRelativePath = rootRelativePathFromScaffoldPath(
-      workspaceRoot,
-      packagePath,
-    );
     if (answers.type === "service") {
       answers.serviceName = serviceNameFromScaffoldPath(packagePath);
     }
@@ -65,7 +60,8 @@ export function registerScaffoldGenerator(plop: PlopTypes.NodePlopAPI): void {
   registerFrameworkActions(plop, workspaceRoot);
 
   plop.setGenerator("scaffold", {
-    description: "Scaffold a library, application, or Hono and Drizzle service",
+    description:
+      "Scaffold a library, application, or Hono Cloudflare Worker service",
     prompts: getScaffoldPrompts(workspaceRoot),
     actions: (data) => {
       if (!data) return [];
@@ -77,7 +73,7 @@ export function registerScaffoldGenerator(plop: PlopTypes.NodePlopAPI): void {
   });
 
   plop.setGenerator("service", {
-    description: "Scaffold a Hono and Drizzle service registered with Traefik",
+    description: "Scaffold a Hono Cloudflare Worker service with Effect v4",
     prompts: getServicePrompts(workspaceRoot),
     actions: (data) => {
       if (!data) return [];
@@ -107,7 +103,6 @@ export {
 export {
   normalizeScaffoldPath,
   packageNameFromScaffoldPath,
-  rootRelativePathFromScaffoldPath,
   serviceNameFromScaffoldPath,
 } from "./paths.ts";
 export { getScaffoldPrompts, getServicePrompts } from "./prompts.ts";

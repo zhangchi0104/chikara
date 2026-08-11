@@ -30,15 +30,6 @@ export function serviceNameFromScaffoldPath(scaffoldPath: string): string {
   return relativePath.split("/").join("-");
 }
 
-export function rootRelativePathFromScaffoldPath(
-  workspaceRoot: string,
-  scaffoldPath: string,
-): string {
-  return (
-    path.relative(path.join(workspaceRoot, scaffoldPath), workspaceRoot) || "."
-  ).replaceAll("\\", "/");
-}
-
 export function validateScaffoldPath(
   input: string,
   workspaceRoot: string,
