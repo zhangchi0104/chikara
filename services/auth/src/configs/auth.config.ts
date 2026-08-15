@@ -8,9 +8,7 @@ export interface AuthConfigBindings {
   readonly BETTER_AUTH_URL: string;
 }
 
-export interface AuthBindings
-  extends AuthCloudflareBindings,
-    AuthConfigBindings {}
+export interface AuthBindings extends AuthCloudflareBindings {}
 
 export interface AuthConfig {
   readonly allowDynamicClientRegistration: boolean;

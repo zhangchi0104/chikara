@@ -1,0 +1,9 @@
+---
+import { getBootstrapStatus, getDashboardSession } from "../lib/auth.js";
+
+const status = await getBootstrapStatus(Astro.request);
+if (!status.data) return Astro.redirect("/bootstrap");
+const session = await getDashboardSession(Astro.request);
+if (!session.data) return Astro.redirect("/sign-in");
+return Astro.redirect("/apis");
+---

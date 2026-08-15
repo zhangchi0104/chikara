@@ -1,0 +1,105 @@
+---
+import CredentialDialog from "../components/CredentialDialog.astro";
+import Dialog from "../components/Dialog.astro";
+import EmptyState from "../components/EmptyState.astro";
+import Icon from "../components/Icon.astro";
+import ReadError from "../components/ReadError.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { getApis, getApplications } from "../lib/auth.js";
+import { formatDate, type Api, type Application } from "../lib/models.js";
+
+const superuser = Astro.locals.superuser;
+const [applicationResult, apiResult] = await Promise.all([
+  getApplications(Astro.request),
+  getApis(Astro.request),
+]);
+const apiFilter = Astro.url.searchParams.get("api");
+const loadFailed = !applicationResult.data || !apiResult.data;
+const applications: ReadonlyArray<Application> = (applicationResult.data ?? []).filter((application) => !apiFilter || application.apiId === apiFilter);
+const apis: ReadonlyArray<Api> = apiResult.data ?? [];
+const selectedId = Astro.url.searchParams.get("selected") ?? applications[0]?.clientId;
+const selected = applications.find((application) => application.clientId === selectedId);
+const selectionHref = (clientId: string) => {
+  const params = new URLSearchParams({ selected: clientId });
+  if (apiFilter) params.set("api", apiFilter);
+  return `/applications?${params.toString()}`;
+};
+const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}` : "/applications";
+---
+
+<DashboardLayout active="applications" title="Applications" description="OAuth Applications trusted to sign users in and request access to a protected API." user={superuser}>
+  {!loadFailed && (apis.length ? <button slot="actions" class="button button-primary" type="button" data-open-dialog="create-application"><Icon name="plus" /><span>Create Application</span></button> : <a slot="actions" class="button button-primary" href="/apis"><Icon name="plus" /><span>Create API first</span></a>)}
+  {loadFailed ? <ReadError resource="Applications" /> : applications.length === 0 ? (
+    <section class="data-surface"><EmptyState kind="application" title={apiFilter ? "No Applications for this API" : "No Applications yet"} message={apis.length ? "Create an Application and assign it to the API it is allowed to call." : "Create an API before registering its first Application."} action={apis.length ? "Create Application" : "Create API"} dialog={apis.length ? "create-application" : ""} href={apis.length ? undefined : "/apis"} /></section>
+  ) : (
+    <section class="master-detail">
+      <div class="master-list">
+        <div class="master-list-head"><div class="search"><Icon name="search" /><input type="search" placeholder="Search Applications" aria-label="Search Applications" data-list-search /></div></div>
+        {applications.map((application) => (
+          <a class="master-item" href={selectionHref(application.clientId)} aria-current={application.clientId === selected?.clientId ? "true" : undefined} data-search-value={`${application.name} ${application.apiName}`.toLowerCase()}>
+            <span class="object-mark"><Icon name="application" /></span>
+            <span class="master-copy"><strong>{application.name}</strong><small>{application.apiName}</small></span>
+            <Icon name="arrow" />
+          </a>
+        ))}
+      </div>
+      {selected && (
+        <article class="detail" data-selected={Astro.url.searchParams.has("selected") ? "true" : undefined}>
+          <a class="back-link" href={listHref}><Icon name="arrow" />All Applications</a>
+          <header class="detail-head">
+            <div><h2>{selected.name}</h2><p>{selected.type === "native" ? "Native public Application" : "Regular web Application"}</p></div>
+            <div class="button-row">
+              <button class="button button-small" type="button" data-open-dialog={`edit-application-${selected.clientId}`}>Edit</button>
+              {!selected.disabled && selected.type === "web" && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}/rotate`} data-confirm="Rotate this credential? The current value will stop working immediately."><Icon name="key" />Rotate</button>}
+              <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}`} data-method="DELETE" data-confirm={`Permanently delete ${selected.name}? Existing sign-ins will fail.`}>Delete</button>
+            </div>
+          </header>
+          <section class="detail-section">
+            <h3>Configuration</h3>
+            <dl class="definition-list">
+              <dt>Client ID</dt><dd class="code">{selected.clientId}</dd>
+              <dt>API</dt><dd><a href={`/apis?selected=${selected.apiId}`}>{selected.apiName}</a></dd>
+              <dt>Status</dt><dd><span class={`badge ${selected.disabled ? "warning" : ""}`}>{selected.disabled ? "Disabled" : "Active"}</span></dd>
+              <dt>Type</dt><dd>{selected.type === "native" ? "Native / public" : "Web / confidential"}</dd>
+              <dt>Created</dt><dd>{formatDate(selected.createdAt)}</dd>
+            </dl>
+          </section>
+          <section class="detail-section">
+            <h3>Allowed callback URLs</h3>
+            <ul class="uri-list">{selected.redirectUris.map((uri) => <li class="code">{uri}</li>)}</ul>
+          </section>
+        </article>
+      )}
+    </section>
+  )}
+
+  {apis.length > 0 && (
+    <Dialog id="create-application" title="Create Application" description="Register an OAuth Application and assign the API it can call.">
+      <form action="/actions/dashboard/applications" method="post" data-enhance>
+        <input type="hidden" name="_returnTo" value={listHref} />
+        <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Chikara Web" /></label>
+        <div class="form-grid">
+          <label class="field"><span>API</span><select name="apiId" required>{apis.map((api) => <option value={api.id} selected={api.id === apiFilter}>{api.name}</option>)}</select></label>
+          <label class="field"><span>Application type</span><select name="type"><option value="web">Regular web</option><option value="native">Native / public</option></select></label>
+        </div>
+        <label class="field"><span>Allowed callback URLs</span><textarea name="redirectUris" required placeholder="https://app.example.com/callback"></textarea><small>One complete HTTP(S) URL per line.</small></label>
+        <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create Application</button></div>
+      </form>
+    </Dialog>
+  )}
+  {selected && (
+    <Dialog id={`edit-application-${selected.clientId}`} title="Edit Application" description="Update routing, API assignment, or availability.">
+      <form action={`/actions/dashboard/applications/${selected.clientId}`} method="post" data-enhance>
+        <input type="hidden" name="_method" value="PATCH" />
+        <input type="hidden" name="_returnTo" value={selectionHref(selected.clientId)} />
+        <input type="hidden" name="_boolean" value="disabled" />
+        <label class="field"><span>Name</span><input name="name" value={selected.name} required maxlength="100" /></label>
+        <label class="field"><span>API</span><select name="apiId" required>{apis.map((api) => <option value={api.id} selected={api.id === selected.apiId}>{api.name}</option>)}</select></label>
+        <label class="field"><span>Allowed callback URLs</span><textarea name="redirectUris" required>{selected.redirectUris.join("\n")}</textarea></label>
+        <label class="checkbox"><input name="disabled" type="checkbox" checked={selected.disabled} /><span>Disable this Application</span></label>
+        <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Save changes</button></div>
+      </form>
+    </Dialog>
+  )}
+  <CredentialDialog />
+</DashboardLayout>

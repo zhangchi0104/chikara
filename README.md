@@ -1,15 +1,15 @@
-# Bun Monorepo Template
+# Chikara
 
-A Bun-first Turborepo template for TypeScript workspaces. It ships shared
-TypeScript and Biome configuration packages plus a custom Turborepo generator
-for scaffolding apps, libraries, Drizzle database packages, and backend
-services.
+A Bun-first Turborepo containing the Chikara mobile app, gateway, Better Auth
+service, and a server-rendered Astro operations dashboard for managing users,
+APIs, and applications.
 
 ## What's Included
 
 - Bun workspaces for `apps/*`, `packages/*`, `hooks/*`, `services/*`, and
   `configs/*`.
-- Turborepo tasks for `build`, `dev`, `lint`, and `check-types`.
+- Turborepo tasks for `build`, `check`, and `test`, plus explicit local Worker
+  development profiles.
 - Shared TypeScript configs in `@repo/typescript-config`.
 - Shared Biome config in `@repo/biome-config`.
 - A custom `scaffold` generator under `turbo/generators`.
@@ -20,12 +20,14 @@ services.
 ```txt
 .
 ├── apps/
-│   └── Chikara/              # Expo application
+│   ├── Chikara/              # Expo application
+│   └── auth-dashboard/       # Astro SSR operations dashboard
 ├── configs/
 │   ├── biome-config/         # Shared Biome config package
 │   └── typescript-config/    # Shared TypeScript config package
 ├── services/
-│   └── auth/                 # Better Auth OAuth 2.1 Worker backed by D1
+│   ├── auth/                 # Better Auth OAuth 2.1 Worker backed by D1
+│   └── gateway/              # Public routing Worker
 ├── turbo/
 │   └── generators/           # Turborepo generator source, tests, and templates
 ├── docs/superpowers/         # Design notes and implementation plans
@@ -43,7 +45,7 @@ Generated projects are created in:
 ## Requirements
 
 - Bun `1.3.14` or newer compatible with the lockfile
-- Node.js `20`, `22`, or `24+` (required by Vitest 4)
+- Node.js `22.12` or newer (required by Astro 7)
 - A Cloudflare account for remote D1 and Worker deployment
 
 Install dependencies:
@@ -52,14 +54,32 @@ Install dependencies:
 bun install
 ```
 
-For local auth development, copy `services/auth/.dev.vars.example` to
+For local development, copy `services/auth/.dev.vars.example` to
 `services/auth/.dev.vars`, replace the secret, then initialize the local D1
-database and start the Worker:
+database and start the repository dev graph:
 
 ```sh
 bun run migrate
-bun run --cwd services/auth dev
+bun run dev
 ```
+
+The root dev graph starts the Expo app, the dashboard at
+`http://localhost:4321`, and the gateway at `http://localhost:8787`. Auth is
+excluded as a standalone Turbo task because the dashboard and gateway load it
+as an auxiliary Worker through their `AUTH` service bindings. Both consumers
+persist D1 and KV data under `services/auth/.wrangler/state`.
+
+On a fresh database, create a 15-minute, single-use superuser bootstrap token:
+
+```sh
+bun run --cwd services/auth dashboard:token
+```
+
+Open `/bootstrap` in the dashboard and submit that token with the initial
+superuser's name, email, and password. Only that user can access dashboard
+management endpoints. Generate a new token if the previous one expires; once a
+superuser exists, bootstrap is permanently closed until the database state is
+deliberately reset.
 
 Before remote deployment, create or find the D1 database and update
 `services/auth/wrangler.jsonc` automatically:
@@ -76,8 +96,15 @@ Pass an optional location hint with
 database when `AUTH_DB` already has a real UUID.
 
 Set `BETTER_AUTH_URL` and optional trusted origins as Worker environment values
-for the deployed environment. The OAuth/OIDC issuer is
+for the deployed environment. Include the deployed dashboard origin in
+`AUTH_TRUSTED_ORIGINS`. The OAuth/OIDC issuer is
 `$BETTER_AUTH_URL/api/auth`; PKCE authorization-code clients use `S256`.
+
+Deploy the auth Worker first and then the dashboard Worker with:
+
+```sh
+bun run deploy:auth-dashboard
+```
 
 ## Scripts
 
@@ -86,14 +113,18 @@ Run these from the repository root:
 ```sh
 bun run build
 bun run dev
+bun run dev:gateway
 bun run lint
+bun run check
 bun run check-types
+bun run test
 bun run migrate
-bun run format
 ```
 
-The first four scripts delegate to Turborepo. `format` runs Prettier over
-TypeScript and Markdown files.
+`dev`, `build`, `check`, and `test` execute the real package task graph through
+Turborepo. `dev:auth`, `dev:dashboard`, and `dev:gateway` remain available for
+focused development. `check-types` is a compatibility alias for the complete
+package checks rather than a no-op task.
 
 ## Scaffolding Projects
 

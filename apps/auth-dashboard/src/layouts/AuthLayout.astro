@@ -1,0 +1,52 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  description: string;
+  title: string;
+}
+
+const { description, title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#111827" />
+    <title>{title} · Chikara</title>
+  </head>
+  <body class="auth-body">
+    <Fragment set:html={`<!--
+THESIS: Chikara turns first access into an explicit security handoff, refusing a generic marketing-style login screen.
+OWN-WORLD: Ink navy field, paper-white credential sheet, warm signal orange, and precise form controls.
+STORY: The operator understands the one-way bootstrap or sign-in step and enters the protected console.
+FIRST VIEWPORT: Product identity and security context hold the left field; one focused form occupies the right.
+FORM: Auth0 and Cloudflare operational canon, pinned by the brief; seed key canon-auth-operations.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->`} />
+    <main class="auth-shell">
+      <section class="auth-context">
+        <a class="brand auth-brand" href="/" aria-label="Chikara dashboard">
+          <span class="brand-mark" aria-hidden="true">力</span>
+          <span>Chikara</span>
+        </a>
+        <div>
+          <h1>One authority.<br />Every connection.</h1>
+          <p>Users, protected APIs, and the applications trusted to reach them—all in one controlled workspace.</p>
+        </div>
+        <p class="auth-footnote">OAuth 2.1 · PKCE S256 · Cloudflare edge</p>
+      </section>
+      <section class="auth-form-wrap">
+        <div class="auth-form-head">
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+        <slot />
+      </section>
+    </main>
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+    <script src="../scripts/dashboard.ts"></script>
+  </body>
+</html>

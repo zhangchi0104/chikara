@@ -1,0 +1,73 @@
+---
+import Dialog from "../components/Dialog.astro";
+import EmptyState from "../components/EmptyState.astro";
+import Icon from "../components/Icon.astro";
+import ReadError from "../components/ReadError.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { getUsers } from "../lib/auth.js";
+import { formatDate, initials, type User } from "../lib/models.js";
+
+const superuser = Astro.locals.superuser;
+const result = await getUsers(Astro.request);
+const loadFailed = !result.data;
+const users: ReadonlyArray<User> = result.data ?? [];
+---
+
+<DashboardLayout active="users" title="Users" description="People who can authenticate with Chikara and the sessions they currently hold." user={superuser}>
+  <button slot="actions" class="button button-primary" type="button" data-open-dialog="create-user"><Icon name="plus" /><span>Create user</span></button>
+  {loadFailed ? <ReadError resource="Users" /> : <section class="data-surface">
+    {users.length === 0 ? (
+      <EmptyState kind="user" title="No users yet" message="Create the first account that will sign in through Chikara." action="Create user" dialog="create-user" />
+    ) : (
+      <>
+        <div class="surface-toolbar">
+          <div class="search"><Icon name="search" /><input type="search" placeholder="Search users" aria-label="Search users" data-table-search /></div>
+          <p>{users.length} {users.length === 1 ? "user" : "users"}</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Status</th><th>Sessions</th><th>Created</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+              {users.map((user) => (
+                <tr data-search-value={`${user.name} ${user.email}`.toLowerCase()}>
+                  <td><div class="identity"><span class="avatar">{initials(user.name)}</span><span><strong>{user.name}</strong><small>{user.email}</small></span></div></td>
+                  <td data-label="Status"><span class={`badge ${user.emailVerified ? "" : "neutral"}`}>{user.emailVerified ? "Verified" : "Unverified"}</span></td>
+                  <td data-label="Sessions">{user.sessionCount}</td>
+                  <td data-label="Created">{formatDate(user.createdAt)}</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="button button-small" type="button" data-open-dialog="edit-user" data-edit-user data-user-id={user.id} data-user-name={user.name} data-user-email={user.email}>Edit</button>
+                      {user.id !== superuser.id && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/users/${user.id}/revoke-sessions`} data-confirm={`Revoke every active session for ${user.name}?`}>Revoke sessions</button>}
+                      {user.id !== superuser.id && <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/users/${user.id}`} data-method="DELETE" data-confirm={`Permanently delete ${user.name}? This cannot be undone.`}>Delete</button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    )}
+  </section>}
+
+  <Dialog id="create-user" title="Create user" description="Add an account that can authenticate with Chikara.">
+    <form action="/actions/dashboard/users" method="post" data-enhance>
+      <input type="hidden" name="_returnTo" value="/users" />
+      <div class="form-grid">
+        <label class="field"><span>Full name</span><input name="name" required maxlength="100" /></label>
+        <label class="field"><span>Email</span><input name="email" type="email" required maxlength="320" /></label>
+      </div>
+      <label class="field"><span>Temporary password</span><input name="password" type="password" required minlength="12" maxlength="128" /><small>Share it through a secure channel.</small></label>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create user</button></div>
+    </form>
+  </Dialog>
+  <Dialog id="edit-user" title="Edit user" description="Update the account's profile information.">
+    <form action="/actions/dashboard/users" method="post" data-enhance data-user-edit-form>
+      <input type="hidden" name="_method" value="PATCH" />
+      <input type="hidden" name="_returnTo" value="/users" />
+      <label class="field"><span>Full name</span><input name="name" required maxlength="100" /></label>
+      <label class="field"><span>Email</span><input name="email" type="email" required maxlength="320" /></label>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Save changes</button></div>
+    </form>
+  </Dialog>
+</DashboardLayout>

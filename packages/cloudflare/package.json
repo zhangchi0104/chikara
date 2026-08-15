@@ -16,8 +16,7 @@
   "scripts": {
     "build": "tsc --build",
     "check": "biome check . && tsc --noEmit",
-    "test": "vitest run",
-    "prepare": "effect-tsgo patch"
+    "test": "vitest run"
   },
   "dependencies": {
     "effect": "catalog:"

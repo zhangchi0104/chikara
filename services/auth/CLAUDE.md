@@ -25,6 +25,13 @@ port `8788` with inspector port `9230` so it can run beside the gateway. Use
 `bun run build` to bundle without deploying and `bun run cf-typegen` after
 changing bindings in `wrangler.jsonc`.
 
+The Astro dashboard starts this Worker through a local auxiliary service
+binding. Keep `http://localhost:4321` in `AUTH_TRUSTED_ORIGINS`; add the deployed
+dashboard origin in production. Generate a local single-use superuser bootstrap
+token with `bun run dashboard:token`, or write one to the remote KV namespace
+with `bun run dashboard:token:remote`. The command prints the raw token once;
+KV stores only its digest and the dashboard consumes it atomically through D1.
+
 Before the first deployment, run `bun run db:create:remote` to create
 `chikara-auth` and replace the placeholder `database_id`. The command is safe
 to rerun: it reuses a matching database returned by Wrangler and exits without

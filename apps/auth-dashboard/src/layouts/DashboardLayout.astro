@@ -1,0 +1,90 @@
+---
+import type { Superuser } from "../lib/models.js";
+import Icon from "../components/Icon.astro";
+import "../styles/global.css";
+
+interface Props {
+  active: "apis" | "applications" | "users";
+  description: string;
+  title: string;
+  user: Superuser;
+}
+
+const { active, description, title, user } = Astro.props;
+const nav = [
+  { href: "/apis", icon: "api", id: "apis", label: "APIs" },
+  { href: "/applications", icon: "application", id: "applications", label: "Applications" },
+  { href: "/users", icon: "user", id: "users", label: "Users" },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#111827" />
+    <title>{title} · Chikara</title>
+  </head>
+  <body>
+    <Fragment set:html={`<!--
+THESIS: Chikara makes the API-to-Application relationship the console's organizing fact, refusing a generic metric-card dashboard.
+OWN-WORLD: Ink navy navigation, paper-white work surfaces, warm signal orange, compact tables, and crisp line icons.
+STORY: The superuser sees the identity estate, selects one operational object, and acts with its consequences in view.
+FIRST VIEWPORT: A narrow dark rail anchors a wide master-detail workbench; title and primary create action sit above the working data.
+FORM: Auth0 and Cloudflare operational canon, pinned by the brief; seed key canon-auth-operations.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->`} />
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/apis" aria-label="Chikara dashboard">
+          <span class="brand-mark" aria-hidden="true">力</span>
+          <span>Chikara</span>
+        </a>
+        <div class="tenant-switcher">
+          <span class="tenant-avatar">C</span>
+          <span><small>Workspace</small><strong>Chikara</strong></span>
+        </div>
+        <nav aria-label="Primary">
+          <p class="nav-label">Manage</p>
+          {nav.map((item) => (
+            <a href={item.href} aria-current={active === item.id ? "page" : undefined}>
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </a>
+          ))}
+        </nav>
+        <div class="sidebar-foot">
+          <div class="profile-compact">
+            <span class="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
+            <span><strong>{user.name}</strong><small>Superuser</small></span>
+          </div>
+          <form action="/actions/auth/sign-out" method="post" data-enhance data-next="/sign-in">
+            <input type="hidden" name="_returnTo" value="/sign-in" />
+            <button class="icon-button inverse" type="submit" aria-label="Sign out"><Icon name="logout" /></button>
+          </form>
+        </div>
+      </aside>
+      <main class="workspace">
+        <header class="workspace-head">
+          <div>
+            <h1>{title}</h1>
+            <p>{description}</p>
+          </div>
+          <slot name="actions" />
+        </header>
+        <slot />
+      </main>
+    </div>
+    <nav class="mobile-nav" aria-label="Primary mobile">
+      {nav.map((item) => (
+        <a href={item.href} aria-current={active === item.id ? "page" : undefined}>
+          <Icon name={item.icon} />
+          <span>{item.label}</span>
+        </a>
+      ))}
+    </nav>
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+    <script src="../scripts/dashboard.ts"></script>
+  </body>
+</html>

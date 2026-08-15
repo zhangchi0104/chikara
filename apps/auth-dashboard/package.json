@@ -1,0 +1,29 @@
+{
+  "name": "@chikara/auth-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "check": "biome check . && astro check",
+    "cf-typegen": "wrangler types ./src/bindings.generated.d.ts --env-interface AuthDashboardCloudflareBindings",
+    "deploy": "astro build && wrangler deploy",
+    "dev": "astro dev",
+    "preview": "astro build && astro preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@chikara/auth": "workspace:*",
+    "@astrojs/cloudflare": "catalog:",
+    "astro": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/check": "catalog:",
+    "@biomejs/biome": "catalog:",
+    "@repo/biome-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "^6.0.2",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

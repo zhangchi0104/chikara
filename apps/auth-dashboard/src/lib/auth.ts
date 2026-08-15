@@ -1,0 +1,56 @@
+import { env } from "cloudflare:workers";
+import {
+  apis,
+  applications,
+  bootstrapStatus,
+  session,
+  users,
+} from "./contract.js";
+import type { Api, Application, Superuser, User } from "./models.js";
+
+export async function forwardToAuth(
+  request: Request,
+  pathname: string,
+): Promise<Response> {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+  url.search = new URL(request.url).search;
+  return env.AUTH.fetch(new Request(url, request));
+}
+
+async function managementGet<T>(
+  request: Request,
+  pathname: string,
+  decode: (value: unknown) => T | undefined,
+): Promise<{ readonly data?: T; readonly status: number }> {
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  const response = await forwardToAuth(
+    new Request(request.url, { headers, method: "GET" }),
+    `/api/dashboard${pathname}`,
+  );
+  if (!response.ok) return { status: response.status };
+  const data = decode(await response.json());
+  return data === undefined
+    ? { status: 502 }
+    : { data, status: response.status };
+}
+
+export const getBootstrapStatus = (request: Request) =>
+  managementGet(request, "/status", bootstrapStatus);
+
+export const getDashboardSession = (request: Request) =>
+  managementGet<Superuser>(request, "/me", session);
+
+export const getUsers = (request: Request) =>
+  managementGet<ReadonlyArray<User>>(request, "/users", users);
+
+export const getApis = (request: Request) =>
+  managementGet<ReadonlyArray<Api>>(request, "/apis", apis);
+
+export const getApplications = (request: Request) =>
+  managementGet<ReadonlyArray<Application>>(
+    request,
+    "/applications",
+    applications,
+  );

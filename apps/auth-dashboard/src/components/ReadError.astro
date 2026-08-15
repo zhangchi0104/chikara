@@ -1,0 +1,13 @@
+---
+interface Props {
+  resource: string;
+}
+
+const { resource } = Astro.props;
+---
+
+<section class="data-surface read-error" role="alert">
+  <h2>{resource} could not be loaded</h2>
+  <p>The auth service did not complete this request. Your existing data has not been replaced or removed.</p>
+  <a class="button button-primary" href={Astro.url.pathname + Astro.url.search}>Try again</a>
+</section>

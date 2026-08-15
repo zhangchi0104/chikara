@@ -7,12 +7,11 @@
   "type": "module",
   "scripts": {
     "build": "wrangler deploy --dry-run --outdir dist",
-    "dev": "wrangler dev -c ./wrangler.jsonc -c ../auth/wrangler.jsonc",
+    "dev": "wrangler dev -c ./wrangler.jsonc -c ../auth/wrangler.jsonc --persist-to ../auth/.wrangler/state",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface GatewayCloudflareBindings",
     "check": "biome check . && tsc --noEmit",
-    "test": "vitest run",
-    "prepare": "effect-tsgo patch"
+    "test": "vitest run"
   },
   "dependencies": {
     "effect": "catalog:",

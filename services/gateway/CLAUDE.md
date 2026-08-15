@@ -19,13 +19,16 @@ Never guess at Effect patterns - check the guide first.
 
 ## Development flow
 
-Run `bun run dev` at the repository root or in this package to start one
-Wrangler session containing both the primary gateway and the auxiliary auth
-Worker. Each configuration path needs its own `-c` flag. The gateway is exposed
-on port `8787`; auth is available through the `AUTH` service binding. A filtered
-gateway build first validates `@chikara/auth#build`, then bundles the gateway
-without deploying. Use `bun run deploy` to publish and `bun run cf-typegen`
-after changing bindings in `wrangler.jsonc`.
+Run `bun run dev` at the repository root to start the complete workspace graph,
+or run `bun run dev:gateway` at the root / `bun run dev` in this package for the
+gateway alone. The gateway command starts one Wrangler session containing both
+the primary gateway and the auxiliary auth Worker. Each configuration path
+needs its own `-c` flag. The gateway is exposed on port `8787`; auth is available
+through the `AUTH` service binding, and its local D1/KV state persists under
+`services/auth/.wrangler/state`. A filtered gateway build first validates
+`@chikara/auth#build`, then bundles the gateway without deploying. Use
+`bun run deploy` to publish and `bun run cf-typegen` after changing bindings in
+`wrangler.jsonc`.
 
 ## Service boundaries
 

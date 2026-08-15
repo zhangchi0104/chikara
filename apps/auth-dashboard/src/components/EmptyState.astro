@@ -1,0 +1,25 @@
+---
+import Icon from "./Icon.astro";
+
+interface Props {
+  action: string;
+  dialog: string;
+  href?: string;
+  kind: "api" | "application" | "user";
+  message: string;
+  title: string;
+}
+
+const { action, dialog, href, kind, message, title } = Astro.props;
+---
+
+<div class="empty-state">
+  <div class="empty-mark"><Icon name={kind} size={24} /></div>
+  <h2>{title}</h2>
+  <p>{message}</p>
+  {href ? (
+    <a class="button button-primary" href={href}><Icon name="plus" />{action}</a>
+  ) : (
+    <button class="button button-primary" type="button" data-open-dialog={dialog}><Icon name="plus" />{action}</button>
+  )}
+</div>

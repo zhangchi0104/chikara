@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "auth-dashboard",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "AUTH",
+      "service": "auth"
+    }
+  ],
+  "assets": {
+    "directory": "./dist/client"
+  }
+}

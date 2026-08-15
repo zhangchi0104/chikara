@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-15T05:31:28Z",
+  "title": "Design System: Chikara Auth Dashboard",
+  "extensions": {
+    "colorMeta": {
+      "signal-orange": {
+        "role": "primary",
+        "displayName": "Signal Orange",
+        "canonical": "#c9471b",
+        "tonalRamp": ["#3e1209", "#681e0d", "#932d13", "#c9471b", "#df6b40", "#ed9879", "#f7c7b5", "#fff0e9"]
+      },
+      "signal-orange-hover": {
+        "role": "primary",
+        "displayName": "Deep Signal Orange",
+        "canonical": "#a83a16",
+        "tonalRamp": ["#351007", "#591b0b", "#7d2910", "#a83a16", "#cc5e37", "#e58d6f", "#f5c3b0", "#fff0e9"]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Warm Focus Ring",
+        "canonical": "#b43f17",
+        "tonalRamp": ["#391107", "#5f1d0c", "#862c11", "#b43f17", "#d5643d", "#e89476", "#f5c5b2", "#fff1ea"]
+      },
+      "navigation": {
+        "role": "neutral",
+        "displayName": "Navigation Navy",
+        "canonical": "#111827",
+        "tonalRamp": ["#080b12", "#111827", "#202b40", "#344158", "#5c667a", "#8e9ab0", "#c4ccd7", "#f4f6f9"]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Operational Headline",
+        "purpose": "Page titles and first-view orientation."
+      },
+      "display": {
+        "displayName": "Authentication Display",
+        "purpose": "Large security context on bootstrap and sign-in surfaces."
+      },
+      "body": {
+        "displayName": "Interface Body",
+        "purpose": "Dense operational copy and values."
+      },
+      "label": {
+        "displayName": "Scanning Label",
+        "purpose": "Table headers, field labels, and navigation groups."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 24px 70px rgba(17, 24, 39, 0.28)",
+        "purpose": "Lift modal decisions over the operating surface."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 35px rgba(17, 24, 39, 0.22)",
+        "purpose": "Separate transient feedback from the workspace."
+      }
+    ],
+    "motion": [
+      {
+        "name": "dialog-enter",
+        "value": "180ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Fast, restrained modal arrival when reduced motion is not requested."
+      },
+      {
+        "name": "toast-enter",
+        "value": "220ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Make asynchronous feedback discoverable without lingering."
+      }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "520px" },
+      { "name": "mobile", "value": "820px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single strong action in a working context.",
+      "html": "<button class=\"ds-button-primary\">Create API</button>",
+      "css": ".ds-button-primary { min-height: 40px; padding: 0 15px; border: 1px solid #c9471b; border-radius: 9px; background: #c9471b; color: #fff; font: 680 15px/1.5 Inter, ui-sans-serif, sans-serif; cursor: pointer; } .ds-button-primary:hover { border-color: #a83a16; background: #a83a16; } .ds-button-primary:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A calm, high-contrast operational input.",
+      "html": "<label class=\"ds-field\"><span>Identifier</span><input value=\"https://api.chikara.dev\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #172033; font: 680 13px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-field input { min-height: 42px; padding: 9px 11px; border: 1px solid #c4ccd7; border-radius: 9px; background: #fff; color: #172033; font-weight: 400; } .ds-field input:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "description": "Compact positive state used inside dense data views.",
+      "html": "<span class=\"ds-badge\">Verified</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 999px; background: #edf7f3; color: #17765a; font: 700 12px/1.5 Inter, ui-sans-serif, sans-serif; }"
+    },
+    {
+      "name": "Data Surface",
+      "kind": "card",
+      "refersTo": "data-surface",
+      "description": "The flat bordered perimeter shared by tables and master-detail views.",
+      "html": "<section class=\"ds-data-surface\"><strong>Chikara Core API</strong><span>2 applications</span></section>",
+      "css": ".ds-data-surface { display: grid; gap: 4px; padding: 16px; border: 1px solid #dce1e8; border-radius: 12px; background: #fff; color: #172033; font: 400 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-data-surface strong { font-weight: 700; } .ds-data-surface span { color: #5c667a; font-size: 13px; } .ds-data-surface:hover { background: #fcfcfd; }"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "description": "A compact dark-rail destination with an orange active signal.",
+      "html": "<a class=\"ds-nav-item\" href=\"#apis\"><span aria-hidden=\"true\">◇</span><span>APIs</span></a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 11px; border-radius: 9px; background: #2a364b; color: #fff; font: 600 15px/1.5 Inter, ui-sans-serif, sans-serif; text-decoration: none; } .ds-nav-item > span:first-child { color: #ff8a5d; } .ds-nav-item:hover { background: #344158; } .ds-nav-item:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Identity Workbench",
+    "overview": "Chikara is a compact operations console: dependable, direct, and quiet enough to keep attention on identity data. Auth0 supplies the familiar management grammar while Cloudflare supplies the dense, infrastructure-oriented workbench. Brand appears through ink navy, paper-white working surfaces, and a rare warm-orange signal.\n\nThe system avoids a generic dashboard of decorative metric cards. APIs and their Applications are the organizing relationship, with lists and details kept close enough to support fast operational comparison.\n\nAuthentication uses the same visual world at a more declarative scale: a dark identity field holds product and security context while a white credential sheet keeps the one-way bootstrap or sign-in task focused.",
+    "keyCharacteristics": [
+      "Compact tables",
+      "Strong information hierarchy",
+      "First-party system typography",
+      "Crisp line icons",
+      "Explicit destructive states",
+      "Responsive master-detail navigation"
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rule",
+        "body": "Orange marks an action or selected object; it is never used as broad decoration.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve the API-to-Applications relationship as the primary information architecture.",
+      "Do keep destructive consequences beside their action and require confirmation.",
+      "Do use native controls and clear focus states for keyboard operation."
+    ],
+    "donts": [
+      "Don't call an OAuth Application a “client” in product copy.",
+      "Don't turn orange into decorative surface area or add vanity metric cards.",
+      "Don't persist, log, or redisplay an Application credential.",
+      "Don't hide operational data behind hover-only interactions."
+    ]
+  }
+}

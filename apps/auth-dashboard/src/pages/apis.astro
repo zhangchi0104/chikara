@@ -1,0 +1,84 @@
+---
+import Dialog from "../components/Dialog.astro";
+import EmptyState from "../components/EmptyState.astro";
+import Icon from "../components/Icon.astro";
+import ReadError from "../components/ReadError.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { getApis } from "../lib/auth.js";
+import { formatDate, type Api } from "../lib/models.js";
+
+const superuser = Astro.locals.superuser;
+const result = await getApis(Astro.request);
+const loadFailed = !result.data;
+const apis: ReadonlyArray<Api> = result.data ?? [];
+const selectedId = Astro.url.searchParams.get("selected") ?? apis[0]?.id;
+const selected = apis.find((api) => api.id === selectedId);
+---
+
+<DashboardLayout active="apis" title="APIs" description="Protected resources that define an audience for one or more trusted Applications." user={superuser}>
+  <button slot="actions" class="button button-primary" type="button" data-open-dialog="create-api"><Icon name="plus" /><span>Create API</span></button>
+  {loadFailed ? <ReadError resource="APIs" /> : apis.length === 0 ? (
+    <section class="data-surface"><EmptyState kind="api" title="Define your first API" message="An API names the protected resource your Applications will request access to." action="Create API" dialog="create-api" /></section>
+  ) : (
+    <section class="master-detail">
+      <div class="master-list">
+        <div class="master-list-head"><div class="search"><Icon name="search" /><input type="search" placeholder="Search APIs" aria-label="Search APIs" data-list-search /></div></div>
+        {apis.map((api) => (
+          <a class="master-item" href={`/apis?selected=${api.id}`} aria-current={api.id === selected?.id ? "true" : undefined} data-search-value={`${api.name} ${api.identifier}`.toLowerCase()}>
+            <span class="object-mark"><Icon name="api" /></span>
+            <span class="master-copy"><strong>{api.name}</strong><small>{api.identifier}</small></span>
+            <Icon name="arrow" />
+          </a>
+        ))}
+      </div>
+      {selected && (
+        <article class="detail" data-selected={Astro.url.searchParams.has("selected") ? "true" : undefined}>
+          <a class="back-link" href="/apis"><Icon name="arrow" />All APIs</a>
+          <header class="detail-head">
+            <div><h2>{selected.name}</h2><p>{selected.description || "No description added."}</p></div>
+            <div class="button-row">
+              <button class="button button-small" type="button" data-open-dialog={`edit-api-${selected.id}`}>Edit</button>
+              <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/apis/${selected.id}`} data-method="DELETE" data-confirm={`Delete ${selected.name}? This is only possible after its Applications are moved or deleted.`}>Delete</button>
+            </div>
+          </header>
+          <section class="detail-section">
+            <h3>Configuration</h3>
+            <dl class="definition-list">
+              <dt>Identifier</dt><dd class="code">{selected.identifier}</dd>
+              <dt>Applications</dt><dd>{selected.applicationCount}</dd>
+              <dt>Created</dt><dd>{formatDate(selected.createdAt)}</dd>
+              <dt>Signing</dt><dd>JWT · OAuth 2.1</dd>
+            </dl>
+          </section>
+          <section class="detail-section">
+            <h3>Trusted Applications</h3>
+            <p class="muted">{selected.applicationCount ? `${selected.applicationCount} ${selected.applicationCount === 1 ? "Application is" : "Applications are"} assigned to this API.` : "No Applications are assigned yet."}</p>
+            <a class="button button-small" href={`/applications?api=${selected.id}`}>View Applications <Icon name="arrow" /></a>
+          </section>
+        </article>
+      )}
+    </section>
+  )}
+
+  <Dialog id="create-api" title="Create API" description="Define the audience your Applications will request.">
+    <form action="/actions/dashboard/apis" method="post" data-enhance>
+      <input type="hidden" name="_returnTo" value="/apis" />
+      <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Chikara Core API" /></label>
+      <label class="field"><span>Identifier</span><input name="identifier" type="url" required placeholder="https://api.example.com" /><small>This becomes the OAuth audience and must be unique.</small></label>
+      <label class="field"><span>Description</span><textarea name="description" maxlength="500" placeholder="What this API protects"></textarea></label>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create API</button></div>
+    </form>
+  </Dialog>
+  {selected && (
+    <Dialog id={`edit-api-${selected.id}`} title="Edit API" description="Changes to the identifier may require Application updates.">
+      <form action={`/actions/dashboard/apis/${selected.id}`} method="post" data-enhance>
+        <input type="hidden" name="_method" value="PATCH" />
+        <input type="hidden" name="_returnTo" value={`/apis?selected=${selected.id}`} />
+        <label class="field"><span>Name</span><input name="name" value={selected.name} required maxlength="100" /></label>
+        <label class="field"><span>Identifier</span><input name="identifier" type="url" value={selected.identifier} required /></label>
+        <label class="field"><span>Description</span><textarea name="description" maxlength="500">{selected.description}</textarea></label>
+        <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Save changes</button></div>
+      </form>
+    </Dialog>
+  )}
+</DashboardLayout>

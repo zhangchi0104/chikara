@@ -1,0 +1,22 @@
+---
+import Icon from "./Icon.astro";
+
+interface Props {
+  description?: string;
+  id: string;
+  title: string;
+}
+
+const { description, id, title } = Astro.props;
+---
+
+<dialog id={id} class="dialog" aria-labelledby={`${id}-title`} aria-describedby={description ? `${id}-description` : undefined}>
+  <div class="dialog-head">
+    <div>
+      <h2 id={`${id}-title`}>{title}</h2>
+      {description && <p id={`${id}-description`}>{description}</p>}
+    </div>
+    <button class="icon-button" type="button" data-close-dialog aria-label="Close dialog"><Icon name="close" /></button>
+  </div>
+  <slot />
+</dialog>
