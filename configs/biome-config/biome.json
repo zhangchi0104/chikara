@@ -4,5 +4,12 @@
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }

@@ -61,15 +61,19 @@ bun run migrate
 bun run --cwd services/auth dev
 ```
 
-Before remote deployment, create the D1 database and put its returned ID into
-`services/auth/wrangler.jsonc`:
+Before remote deployment, create or find the D1 database and update
+`services/auth/wrangler.jsonc` automatically:
 
 ```sh
-bunx wrangler d1 create chikara-auth
+bun run db:create
 cd services/auth
 bunx wrangler secret put BETTER_AUTH_SECRET
 bun run db:migrate:remote
 ```
+
+Pass an optional location hint with
+`bun run db:create -- --location oc`. The script does not create another
+database when `AUTH_DB` already has a real UUID.
 
 Set `BETTER_AUTH_URL` and optional trusted origins as Worker environment values
 for the deployed environment. The OAuth/OIDC issuer is

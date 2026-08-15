@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
-import { createAuthOptions } from "./auth-options.js";
+import { pipe } from "effect";
 import { type AuthBindings, readAuthConfig } from "./configs/auth.config.js";
+import { createAuthOptions } from "./constants/better-auth.constant .js";
 
 export function createAuth(bindings: AuthBindings) {
   return betterAuth({
-    ...createAuthOptions(readAuthConfig(bindings)),
+    ...pipe(bindings, readAuthConfig, createAuthOptions),
     database: bindings.AUTH_DB,
   });
 }

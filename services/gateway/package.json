@@ -1,0 +1,31 @@
+{
+  "name": "@chikara/gateway",
+  "version": "0.0.1",
+  "description": "Chikara edge gateway",
+  "author": "Alex Zhang",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev -c ./wrangler.jsonc -c ../auth/wrangler.jsonc",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface GatewayCloudflareBindings",
+    "check": "biome check . && tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "effect-tsgo patch"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@effect/tsgo": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@repo/biome-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

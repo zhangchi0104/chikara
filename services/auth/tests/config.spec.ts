@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Redacted } from "effect";
 import { readAuthConfig } from "../src/configs/auth.config.js";
 
 const validBindings = {
@@ -12,28 +12,32 @@ const validBindings = {
 describe("auth configuration", () => {
   it.effect("parses Worker bindings", () =>
     Effect.sync(() => {
-      expect(readAuthConfig(validBindings)).toEqual({
+      const { secret, ...config } = readAuthConfig(validBindings);
+
+      expect(config).toEqual({
         allowDynamicClientRegistration: false,
         baseUrl: "http://localhost:8787",
-        secret: validBindings.BETTER_AUTH_SECRET,
         trustedOrigins: ["http://localhost:8787", "chikara://"],
       });
+      expect(String(secret)).toBe("<redacted>");
+      expect(Redacted.value(secret)).toBe(validBindings.BETTER_AUTH_SECRET);
     }),
   );
 
   it.effect("defaults optional Worker bindings", () =>
     Effect.sync(() => {
-      expect(
-        readAuthConfig({
-          BETTER_AUTH_SECRET: validBindings.BETTER_AUTH_SECRET,
-          BETTER_AUTH_URL: validBindings.BETTER_AUTH_URL,
-        }),
-      ).toEqual({
+      const { secret, ...config } = readAuthConfig({
+        BETTER_AUTH_SECRET: validBindings.BETTER_AUTH_SECRET,
+        BETTER_AUTH_URL: validBindings.BETTER_AUTH_URL,
+      });
+
+      expect(config).toEqual({
         allowDynamicClientRegistration: false,
         baseUrl: "http://localhost:8787",
-        secret: validBindings.BETTER_AUTH_SECRET,
         trustedOrigins: [],
       });
+      expect(String(secret)).toBe("<redacted>");
+      expect(Redacted.value(secret)).toBe(validBindings.BETTER_AUTH_SECRET);
     }),
   );
 
@@ -44,7 +48,7 @@ describe("auth configuration", () => {
           ...validBindings,
           BETTER_AUTH_SECRET: "too-short",
         }),
-      ).toThrow(/length of at least 32/);
+      ).toThrow(/Invalid data <redacted>/);
     }),
   );
 

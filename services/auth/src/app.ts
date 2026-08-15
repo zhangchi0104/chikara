@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { createAuth } from "./auth.js";
-import { AUTH_BASE_PATH } from "./auth-options.js";
 import type { AuthBindings } from "./configs/auth.config.js";
+import { AUTH_BASE_PATH } from "./constants/better-auth.constant .js";
 import { consentPage, signInPage, signUpPage } from "./pages.js";
 
 type AuthHandler = (

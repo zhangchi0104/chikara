@@ -1,0 +1,4 @@
+.dev.vars
+.wrangler/
+tsconfig.tsbuildinfo
+worker-configuration.d.ts

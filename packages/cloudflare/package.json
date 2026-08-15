@@ -1,0 +1,35 @@
+{
+  "name": "@repo/cloudflare",
+  "version": "0.0.1",
+  "author": "Alex Zhang",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./effect": {
+      "types": "./dist/effect/effect.module.d.ts",
+      "import": "./dist/effect/effect.module.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "check": "biome check . && tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "effect-tsgo patch"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@effect/tsgo": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@repo/biome-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

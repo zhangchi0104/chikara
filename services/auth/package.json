@@ -7,13 +7,14 @@
   "type": "module",
   "scripts": {
     "build": "wrangler deploy --dry-run --outdir dist",
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --port 8788 --inspector-port 9230",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface AuthCloudflareBindings",
+    "db:create:remote": "bun ./scripts/create-d1.ts",
     "db:generate": "node ./node_modules/.bin/auth generate --config ./scripts/auth-schema.ts --output ./auth-schema.sql --yes",
     "db:migrate:local": "wrangler d1 migrations apply chikara-auth --local",
     "db:migrate:remote": "wrangler d1 migrations apply chikara-auth --remote",
-    "check": "biome check . && tsc --noEmit",
+    "check": "biome check . && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
     "test": "vitest run",
     "prepare": "effect-tsgo patch"
   },
@@ -21,6 +22,7 @@
     "@better-auth/oauth-provider": "1.6.26",
     "better-auth": "1.6.26",
     "effect": "catalog:",
+    "@repo/cloudflare": "workspace:*",
     "hono": "catalog:"
   },
   "devDependencies": {

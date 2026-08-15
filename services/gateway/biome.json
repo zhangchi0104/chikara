@@ -5,7 +5,6 @@
   "files": {
     "includes": [
       "src/**",
-      "scripts/**",
       "tests/**",
       "*.json",
       "*.jsonc",

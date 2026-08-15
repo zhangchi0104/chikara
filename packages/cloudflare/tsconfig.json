@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
+  "extends": "@repo/typescript-config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "plugins": [{ "name": "@effect/language-service" }]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

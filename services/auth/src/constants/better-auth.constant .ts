@@ -1,7 +1,8 @@
 import { oauthProvider } from "@better-auth/oauth-provider";
 import type { BetterAuthOptions } from "better-auth";
 import { jwt } from "better-auth/plugins";
-import type { AuthConfig } from "./configs/auth.config.js";
+import { Redacted } from "effect";
+import type { AuthConfig } from "../configs/auth.config.js";
 
 export const AUTH_BASE_PATH = "/api/auth";
 
@@ -34,7 +35,7 @@ export function createAuthOptions(config: AuthConfig): BetterAuthOptions {
         },
       }),
     ],
-    secret: config.secret,
+    secret: Redacted.value(config.secret),
     trustedOrigins: [...config.trustedOrigins],
   };
 }

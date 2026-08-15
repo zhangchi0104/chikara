@@ -20,13 +20,18 @@ Never guess at Effect patterns - check the guide first.
 ## Development flow
 
 Copy `.dev.vars.example` to `.dev.vars`, replace `BETTER_AUTH_SECRET`, then run
-`bun run db:migrate:local` followed by `bun run dev`. Use `bun run build` to
-bundle without deploying and `bun run cf-typegen` after changing bindings in
-`wrangler.jsonc`.
+`bun run db:migrate:local` followed by `bun run dev`. The auth Worker listens on
+port `8788` with inspector port `9230` so it can run beside the gateway. Use
+`bun run build` to bundle without deploying and `bun run cf-typegen` after
+changing bindings in `wrangler.jsonc`.
 
-Before the first deployment, create `chikara-auth` with Wrangler, replace the
-placeholder `database_id`, store `BETTER_AUTH_SECRET` with `wrangler secret
-put`, and apply `bun run db:migrate:remote`. The issuer is
+Before the first deployment, run `bun run db:create:remote` to create
+`chikara-auth` and replace the placeholder `database_id`. The command is safe
+to rerun: it reuses a matching database returned by Wrangler and exits without
+creating another database when a real UUID is already configured. Optional
+creation flags can be appended, for example
+`bun run db:create:remote -- --location oc`. Then store `BETTER_AUTH_SECRET`
+with `wrangler secret put` and apply `bun run db:migrate:remote`. The issuer is
 `$BETTER_AUTH_URL/api/auth`.
 
 ## Service boundaries

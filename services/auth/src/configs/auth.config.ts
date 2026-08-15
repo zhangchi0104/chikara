@@ -1,4 +1,5 @@
-import { Config, ConfigProvider, Effect, Schema } from "effect";
+import { CFConfigProvider } from "@repo/cloudflare/effect";
+import { Config, Effect, type Redacted, Schema } from "effect";
 
 export interface AuthConfigBindings {
   readonly AUTH_ALLOW_DYNAMIC_CLIENT_REGISTRATION?: string;
@@ -14,7 +15,7 @@ export interface AuthBindings
 export interface AuthConfig {
   readonly allowDynamicClientRegistration: boolean;
   readonly baseUrl: string;
-  readonly secret: string;
+  readonly secret: Redacted.Redacted<string>;
   readonly trustedOrigins: ReadonlyArray<string>;
 }
 
@@ -61,7 +62,7 @@ const authConfig = Config.all({
     Config.map((url) => url.origin),
   ),
   secret: Config.schema(
-    Schema.String.check(Schema.isMinLength(32)),
+    Schema.Redacted(Schema.String.check(Schema.isMinLength(32))),
     "BETTER_AUTH_SECRET",
   ),
   trustedOrigins: Config.schema(TrustedOrigins, "AUTH_TRUSTED_ORIGINS").pipe(
@@ -71,6 +72,6 @@ const authConfig = Config.all({
 });
 
 export function readAuthConfig(bindings: AuthConfigBindings): AuthConfig {
-  const provider = ConfigProvider.fromUnknown(bindings);
+  const provider = CFConfigProvider.fromBindings(bindings);
   return Effect.runSync(authConfig.parse(provider));
 }
