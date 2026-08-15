@@ -81,9 +81,59 @@ describe("auth", () => {
       expect(yield* Effect.promise(() => signIn.text())).toMatch(
         /Sign in to Chikara/,
       );
-      expect(yield* Effect.promise(() => consent.text())).toMatch(
-        /Authorize this client/,
-      );
+      const consentHtml = yield* Effect.promise(() => consent.text());
+      expect(consentHtml).toMatch(/Authorize this client/);
+      expect(consentHtml).toContain('name="accept" value="false"');
+      expect(consentHtml).toContain('name="accept" value="true"');
+    }),
+  );
+
+  it.effect("submits consent as a top-level callback redirect", () =>
+    Effect.gen(function* () {
+      for (const accept of [false, true]) {
+        let forwardedRequest: Request | undefined;
+        const consentApp = createApp((request) => {
+          forwardedRequest = request;
+          return Response.json({
+            redirect: true,
+            url: "chikara://oauth/callback?result=complete",
+          });
+        });
+        const response = yield* Effect.promise(() =>
+          Promise.resolve(
+            consentApp.request(
+              "/consent?sig=signed&ba_param=client_id&ba_param=scope&client_id=client-1&scope=openid%20profile&unsigned=drop",
+              {
+                body: `accept=${accept}`,
+                headers: {
+                  "content-type": "application/x-www-form-urlencoded",
+                  cookie: "session=active",
+                },
+                method: "POST",
+              },
+            ),
+          ),
+        );
+
+        expect(response.status).toBe(303);
+        expect(response.headers.get("location")).toBe(
+          "chikara://oauth/callback?result=complete",
+        );
+        expect(forwardedRequest?.url).toBe(
+          "http://localhost/api/auth/oauth2/consent",
+        );
+        expect(forwardedRequest?.headers.get("cookie")).toBe("session=active");
+        if (!forwardedRequest) {
+          throw new Error("Consent request was not forwarded");
+        }
+        const requestToInspect = forwardedRequest;
+        expect(yield* Effect.promise(() => requestToInspect.json())).toEqual({
+          accept,
+          oauth_query:
+            "sig=signed&ba_param=client_id&ba_param=scope&client_id=client-1&scope=openid+profile",
+          scope: "openid profile",
+        });
+      }
     }),
   );
 });

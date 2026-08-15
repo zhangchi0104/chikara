@@ -3,10 +3,17 @@ import {
   apis,
   applications,
   bootstrapStatus,
+  oauthEndpoints,
   session,
   users,
 } from "./contract.js";
-import type { Api, Application, Superuser, User } from "./models.js";
+import type {
+  Api,
+  Application,
+  OauthEndpoints,
+  Superuser,
+  User,
+} from "./models.js";
 
 export async function forwardToAuth(
   request: Request,
@@ -54,3 +61,19 @@ export const getApplications = (request: Request) =>
     "/applications",
     applications,
   );
+
+export async function getOauthEndpoints(
+  request: Request,
+): Promise<{ readonly data?: OauthEndpoints; readonly status: number }> {
+  const url = new URL(request.url);
+  url.search = "";
+  const response = await forwardToAuth(
+    new Request(url, { headers: request.headers, method: "GET" }),
+    "/.well-known/oauth-authorization-server/api/auth",
+  );
+  if (!response.ok) return { status: response.status };
+  const data = oauthEndpoints(await response.json());
+  return data === undefined
+    ? { status: 502 }
+    : { data, status: response.status };
+}

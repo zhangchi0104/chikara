@@ -122,21 +122,16 @@ export function consentPage(): string {
     `<h1>Authorize this client</h1>
     <p><strong data-client>Unknown client</strong> is requesting access.</p>
     <p class="muted">Requested scopes: <span data-scopes>none</span></p>
-    <div class="actions">
-      <button data-deny type="button">Deny</button>
-      <button data-accept type="button">Allow</button>
-    </div>
-    <p data-error hidden></p>`,
+    <form method="post">
+      <div class="actions">
+        <button name="accept" value="false" type="submit">Deny</button>
+        <button name="accept" value="true" type="submit">Allow</button>
+      </div>
+    </form>`,
     `
 const clientId = query.get("client_id") || "Unknown client";
 const scope = query.get("scope") || "";
 document.querySelector("[data-client]").textContent = clientId;
-document.querySelector("[data-scopes]").textContent = scope || "none";
-async function consent(accept) {
-  try { await request("/api/auth/oauth2/consent", { accept, scope }); }
-  catch (error) { showError(error); }
-}
-document.querySelector("[data-deny]").addEventListener("click", () => consent(false));
-document.querySelector("[data-accept]").addEventListener("click", () => consent(true));`,
+document.querySelector("[data-scopes]").textContent = scope || "none";`,
   );
 }

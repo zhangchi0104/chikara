@@ -1,4 +1,10 @@
-import type { Api, Application, Superuser, User } from "./models.js";
+import type {
+  Api,
+  Application,
+  OauthEndpoints,
+  Superuser,
+  User,
+} from "./models.js";
 
 type RecordValue = Record<string, unknown>;
 
@@ -151,6 +157,15 @@ export function applications(
 
 export function bootstrapStatus(value: unknown): boolean | undefined {
   return boolean(record(value)?.bootstrapped);
+}
+
+export function oauthEndpoints(value: unknown): OauthEndpoints | undefined {
+  const item = record(value);
+  const authorizationUrl = string(item?.authorization_endpoint);
+  const tokenUrl = string(item?.token_endpoint);
+  return authorizationUrl && tokenUrl
+    ? { authorizationUrl, tokenUrl }
+    : undefined;
 }
 
 export function session(value: unknown): Superuser | undefined {

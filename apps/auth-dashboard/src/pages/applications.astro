@@ -5,18 +5,20 @@ import EmptyState from "../components/EmptyState.astro";
 import Icon from "../components/Icon.astro";
 import ReadError from "../components/ReadError.astro";
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-import { getApis, getApplications } from "../lib/auth.js";
+import { getApis, getApplications, getOauthEndpoints } from "../lib/auth.js";
 import { formatDate, type Api, type Application } from "../lib/models.js";
 
 const superuser = Astro.locals.superuser;
-const [applicationResult, apiResult] = await Promise.all([
+const [applicationResult, apiResult, endpointResult] = await Promise.all([
   getApplications(Astro.request),
   getApis(Astro.request),
+  getOauthEndpoints(Astro.request),
 ]);
 const apiFilter = Astro.url.searchParams.get("api");
 const loadFailed = !applicationResult.data || !apiResult.data;
 const applications: ReadonlyArray<Application> = (applicationResult.data ?? []).filter((application) => !apiFilter || application.apiId === apiFilter);
 const apis: ReadonlyArray<Api> = apiResult.data ?? [];
+const oauthEndpoints = endpointResult.data;
 const selectedId = Astro.url.searchParams.get("selected") ?? applications[0]?.clientId;
 const selected = applications.find((application) => application.clientId === selectedId);
 const selectionHref = (clientId: string) => {
@@ -49,6 +51,7 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
           <header class="detail-head">
             <div><h2>{selected.name}</h2><p>{selected.type === "native" ? "Native public Application" : "Regular web Application"}</p></div>
             <div class="button-row">
+              <button class="button button-small" type="button" data-test-auth data-authorization-url={oauthEndpoints?.authorizationUrl} data-client-id={selected.clientId} data-redirect-uri={selected.redirectUris[0]} disabled={!oauthEndpoints || selected.disabled} title={selected.disabled ? "Enable this Application to test its auth flow." : "Open the authorization flow in a new tab."}>Test auth flow</button>
               <button class="button button-small" type="button" data-open-dialog={`edit-application-${selected.clientId}`}>Edit</button>
               {!selected.disabled && selected.type === "web" && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}/rotate`} data-confirm="Rotate this credential? The current value will stop working immediately."><Icon name="key" />Rotate</button>}
               <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}`} data-method="DELETE" data-confirm={`Permanently delete ${selected.name}? Existing sign-ins will fail.`}>Delete</button>
@@ -63,6 +66,22 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
               <dt>Type</dt><dd>{selected.type === "native" ? "Native / public" : "Web / confidential"}</dd>
               <dt>Created</dt><dd>{formatDate(selected.createdAt)}</dd>
             </dl>
+          </section>
+          <section class="detail-section">
+            <h3>OAuth endpoints</h3>
+            {oauthEndpoints ? (
+              <dl class="endpoint-list">
+                <div>
+                  <dt>Authorization endpoint</dt>
+                  <dd><span class="code">{oauthEndpoints.authorizationUrl}</span><button class="button button-small endpoint-copy" type="button" data-copy data-copy-value={oauthEndpoints.authorizationUrl} data-copy-message="Authorization endpoint copied."><Icon name="copy" size={15} /><span data-copy-label>Copy</span></button></dd>
+                </div>
+                <div>
+                  <dt>Token endpoint</dt>
+                  <dd><span class="code">{oauthEndpoints.tokenUrl}</span><button class="button button-small endpoint-copy" type="button" data-copy data-copy-value={oauthEndpoints.tokenUrl} data-copy-message="Token endpoint copied."><Icon name="copy" size={15} /><span data-copy-label>Copy</span></button></dd>
+                </div>
+              </dl>
+              <p class="endpoint-hint">The test opens a new tab and returns to the first allowed callback URL.</p>
+            ) : <p class="muted">Endpoint URLs are temporarily unavailable.</p>}
           </section>
           <section class="detail-section">
             <h3>Allowed callback URLs</h3>

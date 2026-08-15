@@ -1,3 +1,5 @@
+import { createAuthorizationTestUrl } from "../lib/oauth-test.js";
+
 function showToast(
   message: string,
   tone: "error" | "success" = "success",
@@ -68,6 +70,64 @@ function clearCredential(dialog: HTMLDialogElement): void {
   delete dialog.dataset.locked;
 }
 
+async function copyToClipboard(button: HTMLElement): Promise<void> {
+  const value =
+    button.dataset.copyValue ??
+    document.querySelector<HTMLElement>("[data-credential]")?.textContent;
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    const label = button.querySelector<HTMLElement>("[data-copy-label]");
+    if (label) {
+      label.textContent = "Copied";
+      button.dataset.copied = "true";
+      window.setTimeout(() => {
+        label.textContent = "Copy";
+        delete button.dataset.copied;
+      }, 1800);
+    }
+    showToast(
+      button.dataset.copyMessage ??
+        "Credential copied. Store it somewhere safe.",
+    );
+  } catch {
+    showToast(
+      "Could not copy. Select the value and copy it manually.",
+      "error",
+    );
+  }
+}
+
+async function startAuthTest(button: HTMLButtonElement): Promise<void> {
+  const authorizationUrl = button.dataset.authorizationUrl;
+  const clientId = button.dataset.clientId;
+  const redirectUri = button.dataset.redirectUri;
+  if (!authorizationUrl || !clientId || !redirectUri) {
+    showToast("The auth test configuration is incomplete.", "error");
+    return;
+  }
+  const testWindow = window.open("about:blank", "_blank");
+  if (!testWindow) {
+    showToast("Allow pop-ups to test the auth flow.", "error");
+    return;
+  }
+  testWindow.opener = null;
+  button.disabled = true;
+  try {
+    const url = await createAuthorizationTestUrl({
+      authorizationUrl,
+      clientId,
+      redirectUri,
+    });
+    testWindow.location.replace(url);
+  } catch {
+    testWindow.close();
+    showToast("The auth test could not be started.", "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 document.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -97,13 +157,11 @@ document.addEventListener("click", async (event) => {
   const closer = target.closest("[data-close-dialog]");
   if (closer) closeDialog(closer);
 
-  const copy = target.closest("[data-copy]");
-  if (copy) {
-    const value =
-      document.querySelector<HTMLElement>("[data-credential]")?.textContent;
-    if (value) await navigator.clipboard.writeText(value);
-    showToast("Credential copied. Store it somewhere safe.");
-  }
+  const copy = target.closest<HTMLElement>("[data-copy]");
+  if (copy) await copyToClipboard(copy);
+
+  const authTest = target.closest<HTMLButtonElement>("[data-test-auth]");
+  if (authTest) await startAuthTest(authTest);
 
   const acknowledge = target.closest("[data-acknowledge]");
   if (acknowledge) {

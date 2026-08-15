@@ -5,6 +5,11 @@ export type {
   Superuser,
 } from "@chikara/auth/dashboard-contract";
 
+export interface OauthEndpoints {
+  readonly authorizationUrl: string;
+  readonly tokenUrl: string;
+}
+
 export function formatDate(value: number | string): string {
   return new Intl.DateTimeFormat("en", {
     day: "numeric",

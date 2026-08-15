@@ -90,6 +90,37 @@ describe("gateway", () => {
     }),
   );
 
+  it.effect("exposes the canonical public auth routes", () =>
+    Effect.gen(function* () {
+      const paths: Array<string> = [];
+      const binding = authBinding((request) => {
+        paths.push(new URL(request.url).pathname);
+        return new Response("auth");
+      });
+
+      for (const path of [
+        "/api/auth/oauth2/authorize",
+        "/.well-known/oauth-authorization-server/api/auth",
+        "/sign-in",
+        "/sign-up",
+        "/consent",
+      ]) {
+        const response = yield* Effect.promise(() =>
+          Promise.resolve(app.request(path, undefined, binding)),
+        );
+        expect(response.status).toBe(200);
+      }
+
+      expect(paths).toEqual([
+        "/api/auth/oauth2/authorize",
+        "/.well-known/oauth-authorization-server/api/auth",
+        "/sign-in",
+        "/sign-up",
+        "/consent",
+      ]);
+    }),
+  );
+
   it.effect("returns the auth response unchanged", () =>
     Effect.gen(function* () {
       const binding = authBinding(() =>
