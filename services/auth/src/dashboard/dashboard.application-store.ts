@@ -15,10 +15,15 @@ import type {
 } from "./dashboard.models.js";
 
 interface ApplicationRow
-  extends Omit<DashboardApplication, "disabled" | "redirectUris" | "type"> {
+  extends Omit<
+    DashboardApplication,
+    "createdAt" | "disabled" | "redirectUris" | "type" | "updatedAt"
+  > {
+  readonly createdAt: number | string;
   readonly disabled: boolean | number;
   readonly redirectUris: string;
   readonly type: string;
+  readonly updatedAt: number | string;
 }
 
 interface ManagedApplicationRow extends ApplicationRow {
@@ -36,15 +41,25 @@ function parseStringList(value: string): ReadonlyArray<string> {
   }
 }
 
+function parseTimestamp(value: number | string): number {
+  const timestamp = typeof value === "number" ? value : Date.parse(value);
+  if (!Number.isFinite(timestamp)) {
+    throw new DashboardStorageError("parse Application timestamp");
+  }
+  return timestamp;
+}
+
 function toApplication(row: ApplicationRow): DashboardApplication {
   if (row.type !== "native" && row.type !== "web") {
     throw new DashboardStorageError("parse Application type");
   }
   return {
     ...row,
+    createdAt: parseTimestamp(row.createdAt),
     disabled: Boolean(row.disabled),
     redirectUris: parseStringList(row.redirectUris),
     type: row.type,
+    updatedAt: parseTimestamp(row.updatedAt),
   };
 }
 

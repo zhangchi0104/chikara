@@ -47,6 +47,30 @@ describe("auth dashboard", () => {
     ).toThrow(DashboardError);
   });
 
+  it("accepts custom schemes for native application callbacks", () => {
+    expect(
+      urlList(
+        {
+          redirectUris: ["chikara://", "http://localhost:8081/callback"],
+        },
+        "redirectUris",
+      ),
+    ).toEqual(["chikara://", "http://localhost:8081/callback"]);
+  });
+
+  it("rejects unsafe application callbacks", () => {
+    for (const redirectUri of [
+      "javascript:alert(1)",
+      "https://app.example.com/callback#fragment",
+      "http://app.example.com/callback",
+      "not a URL",
+    ]) {
+      expect(() =>
+        urlList({ redirectUris: [redirectUri] }, "redirectUris"),
+      ).toThrow(DashboardError);
+    }
+  });
+
   it("normalizes and validates email addresses", () => {
     expect(requiredEmail({ email: " Admin@Example.com " }, "email")).toBe(
       "admin@example.com",

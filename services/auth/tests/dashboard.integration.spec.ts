@@ -244,7 +244,7 @@ describe("auth dashboard integration", () => {
         body: JSON.stringify({
           apiId: apiValue.api.id,
           name: "Web Application",
-          redirectUris: ["https://app.example.com/callback"],
+          redirectUris: ["chikara://"],
           type: "web",
         }),
         headers,
@@ -269,6 +269,23 @@ describe("auth dashboard integration", () => {
     }
     const clientId = applicationValue.application.clientId;
     expect(applicationValue.credential).toMatch(/^chikara_cs_/);
+
+    const listed = await app.request(
+      "/api/dashboard/applications",
+      { headers },
+      bindings,
+    );
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toMatchObject({
+      applications: [
+        expect.objectContaining({
+          clientId,
+          createdAt: expect.any(Number),
+          redirectUris: ["chikara://"],
+          updatedAt: expect.any(Number),
+        }),
+      ],
+    });
 
     await bindings.AUTH_DB.prepare(
       `INSERT INTO oauthClient

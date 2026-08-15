@@ -82,7 +82,7 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
           <label class="field"><span>API</span><select name="apiId" required>{apis.map((api) => <option value={api.id} selected={api.id === apiFilter}>{api.name}</option>)}</select></label>
           <label class="field"><span>Application type</span><select name="type"><option value="web">Regular web</option><option value="native">Native / public</option></select></label>
         </div>
-        <label class="field"><span>Allowed callback URLs</span><textarea name="redirectUris" required placeholder="https://app.example.com/callback"></textarea><small>One complete HTTP(S) URL per line.</small></label>
+        <label class="field"><span>Allowed callback URLs</span><textarea name="redirectUris" required placeholder="https://app.example.com/callback&#10;chikara://"></textarea><small>One HTTPS, loopback HTTP, or application-scheme URL per line.</small></label>
         <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create Application</button></div>
       </form>
     </Dialog>

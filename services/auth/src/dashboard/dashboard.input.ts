@@ -101,15 +101,41 @@ export function requiredUrl(input: JsonObject, key: string): string {
   }
 }
 
+const dangerousCallbackSchemes = new Set(["data:", "javascript:", "vbscript:"]);
+
+function isLoopbackHost(hostname: string): boolean {
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "[::1]"
+  ) {
+    return true;
+  }
+  const octets = hostname.split(".");
+  return (
+    octets.length === 4 &&
+    octets[0] === "127" &&
+    octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)
+  );
+}
+
 export function urlList(input: JsonObject, key: string): ReadonlyArray<string> {
   return stringList(input, key).map((value) => {
     try {
       const url = new URL(value);
-      if (url.protocol !== "https:" && url.protocol !== "http:")
+      if (
+        dangerousCallbackSchemes.has(url.protocol) ||
+        value.includes("#") ||
+        (url.protocol === "http:" && !isLoopbackHost(url.hostname))
+      ) {
         throw new Error();
+      }
       return url.toString();
     } catch {
-      throw new DashboardError(422, `${key} contains an invalid HTTP(S) URL.`);
+      throw new DashboardError(
+        422,
+        `${key} must use HTTPS, loopback HTTP, or an application URL scheme without a fragment.`,
+      );
     }
   });
 }
