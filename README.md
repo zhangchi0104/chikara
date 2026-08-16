@@ -1,8 +1,8 @@
 # Chikara
 
-A Bun-first Turborepo containing the Chikara mobile app, gateway, Better Auth
-service, and a server-rendered Astro operations dashboard for managing users,
-APIs, and applications.
+A Bun-first Turborepo containing the Chikara mobile app, gateway, the Better
+Auth-powered Otakuma Auth service, and a server-rendered Astro operations
+dashboard for managing users, APIs, and applications.
 
 ## What's Included
 

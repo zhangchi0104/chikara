@@ -8,7 +8,7 @@ related_targets: ["apps/auth-dashboard/src/pages/apis.astro","apps/auth-dashboar
 # Auth operations workbench
 
 - Mode: Operate.
-- Audience: the sole Chikara superuser maintaining identity infrastructure.
+- Audience: the sole Otakuma Auth superuser maintaining identity infrastructure.
 - Job: inspect and safely manage users, protected APIs, and the Applications assigned to each API.
 - Primary actions: create and update objects; revoke sessions; rotate credentials; explicitly confirm destructive changes.
 - Content: real Better Auth and D1 records only, with API-to-Applications as the organizing relationship.

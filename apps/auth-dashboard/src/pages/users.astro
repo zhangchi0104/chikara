@@ -13,11 +13,11 @@ const loadFailed = !result.data;
 const users: ReadonlyArray<User> = result.data ?? [];
 ---
 
-<DashboardLayout active="users" title="Users" description="People who can authenticate with Chikara and the sessions they currently hold." user={superuser}>
+<DashboardLayout active="users" title="Users" description="People who can authenticate with Otakuma Auth and the sessions they currently hold." user={superuser}>
   <button slot="actions" class="button button-primary" type="button" data-open-dialog="create-user"><Icon name="plus" /><span>Create user</span></button>
   {loadFailed ? <ReadError resource="Users" /> : <section class="data-surface">
     {users.length === 0 ? (
-      <EmptyState kind="user" title="No users yet" message="Create the first account that will sign in through Chikara." action="Create user" dialog="create-user" />
+      <EmptyState kind="user" title="No users yet" message="Create the first account that will sign in through Otakuma Auth." action="Create user" dialog="create-user" />
     ) : (
       <>
         <div class="surface-toolbar">
@@ -50,7 +50,7 @@ const users: ReadonlyArray<User> = result.data ?? [];
     )}
   </section>}
 
-  <Dialog id="create-user" title="Create user" description="Add an account that can authenticate with Chikara.">
+  <Dialog id="create-user" title="Create user" description="Add an account that can authenticate with Otakuma Auth.">
     <form action="/actions/dashboard/users" method="post" data-enhance>
       <input type="hidden" name="_returnTo" value="/users" />
       <div class="form-grid">

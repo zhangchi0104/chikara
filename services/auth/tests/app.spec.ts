@@ -78,13 +78,33 @@ describe("auth", () => {
       );
 
       expect(signIn.headers.get("content-type") ?? "").toMatch(/text\/html/);
-      expect(yield* Effect.promise(() => signIn.text())).toMatch(
-        /Sign in to Chikara/,
-      );
+      const signInHtml = yield* Effect.promise(() => signIn.text());
+      expect(signInHtml).toContain("<title>Sign in · Otakuma Auth</title>");
+      expect(signInHtml).toMatch(/Sign in to Otakuma Auth/);
       const consentHtml = yield* Effect.promise(() => consent.text());
+      expect(consentHtml).toContain("<title>Authorize · Otakuma Auth</title>");
       expect(consentHtml).toMatch(/Authorize this client/);
       expect(consentHtml).toContain('name="accept" value="false"');
       expect(consentHtml).toContain('name="accept" value="true"');
+    }),
+  );
+
+  it.effect("serves the account creation screen", () =>
+    Effect.gen(function* () {
+      const response = yield* Effect.promise(() =>
+        Promise.resolve(app.request("/sign-up")),
+      );
+
+      expect(response.headers.get("content-type") ?? "").toMatch(/text\/html/);
+      const html = yield* Effect.promise(() => response.text());
+      expect(html).toContain("One identity. A direct route back.");
+      expect(html).toContain("Otakuma Auth");
+      expect(html).toContain('name="name"');
+      expect(html).toContain('name="email"');
+      expect(html).toContain('name="password"');
+      expect(html).toContain("/api/auth/sign-up/email");
+      expect(html).toContain("signInLink.search = window.location.search");
+      expect(html).toContain("seed key 3e51f2d0");
     }),
   );
 

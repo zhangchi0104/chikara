@@ -8,7 +8,7 @@ const session = await getDashboardSession(Astro.request);
 if (session.data) return Astro.redirect("/apis");
 ---
 
-<AuthLayout title="Welcome back" description="Sign in with the superuser account to manage Chikara identity.">
+<AuthLayout title="Welcome back" description="Sign in with the superuser account to manage identity in Otakuma Auth.">
   <form class="auth-form" action="/actions/auth/sign-in/email" method="post" data-enhance data-next="/apis">
     <input type="hidden" name="_returnTo" value="/apis" />
     <input type="hidden" name="_boolean" value="rememberMe" />

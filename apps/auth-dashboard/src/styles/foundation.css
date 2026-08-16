@@ -98,7 +98,9 @@ button:disabled {
   border-radius: 9px;
   background: var(--signal);
   color: white;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.04em;
 }
 .tenant-switcher {
   display: flex;
@@ -123,6 +125,8 @@ button:disabled {
 .tenant-avatar {
   width: 30px;
   height: 30px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 .tenant-switcher span:last-child,
 .profile-compact span:last-child {

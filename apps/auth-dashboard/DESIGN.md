@@ -1,5 +1,5 @@
 ---
-name: Chikara Auth Dashboard
+name: Otakuma Auth Dashboard
 description: A precise identity operations workbench for one trusted operator.
 colors:
   ink: "#172033"
@@ -84,13 +84,13 @@ components:
     height: "42px"
 ---
 
-# Design System: Chikara Auth Dashboard
+# Design System: Otakuma Auth Dashboard
 
 ## Overview
 
 **Creative North Star: “The Identity Workbench”**
 
-Chikara is a compact operations console: dependable, direct, and quiet enough
+Otakuma Auth is a compact operations console: dependable, direct, and quiet enough
 to keep attention on identity data. Auth0 supplies the familiar management
 grammar while Cloudflare supplies the dense, infrastructure-oriented
 workbench. Brand appears through ink navy, paper-white working surfaces, and a

@@ -1,7 +1,7 @@
 {
   "name": "@chikara/auth",
   "version": "0.0.1",
-  "description": "Chikara OAuth 2.1 authorization server",
+  "description": "Otakuma Auth OAuth 2.1 authorization server",
   "author": "Alex Zhang",
   "private": true,
   "type": "module",

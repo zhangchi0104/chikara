@@ -1,4 +1,4 @@
-# Chikara Auth Dashboard
+# Otakuma Auth Dashboard
 
 <!-- impeccable:product-schema 1 -->
 
@@ -14,13 +14,13 @@ management traffic stay first-party on the dashboard origin.
 
 ## Users
 
-The sole Chikara superuser administering identity infrastructure. They create
+The sole Otakuma Auth superuser administering identity infrastructure. They create
 and maintain end users, protected APIs, and the OAuth applications allowed to
 call each API.
 
 ## Product Purpose
 
-Provide one operational console for Chikara authentication. Success means the
+Provide one operational console for Otakuma Auth. Success means the
 superuser can understand the current identity estate, make routine changes
 safely, and retrieve a newly issued application credential exactly once.
 

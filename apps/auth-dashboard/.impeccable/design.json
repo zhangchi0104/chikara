@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-08-15T05:31:28Z",
-  "title": "Design System: Chikara Auth Dashboard",
+  "title": "Design System: Otakuma Auth Dashboard",
   "extensions": {
     "colorMeta": {
       "signal-orange": {
@@ -90,7 +90,7 @@
       "kind": "input",
       "refersTo": "input",
       "description": "A calm, high-contrast operational input.",
-      "html": "<label class=\"ds-field\"><span>Identifier</span><input value=\"https://api.chikara.dev\"></label>",
+      "html": "<label class=\"ds-field\"><span>Identifier</span><input value=\"https://api.example.com\"></label>",
       "css": ".ds-field { display: grid; gap: 6px; color: #172033; font: 680 13px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-field input { min-height: 42px; padding: 9px 11px; border: 1px solid #c4ccd7; border-radius: 9px; background: #fff; color: #172033; font-weight: 400; } .ds-field input:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; }"
     },
     {
@@ -105,7 +105,7 @@
       "kind": "card",
       "refersTo": "data-surface",
       "description": "The flat bordered perimeter shared by tables and master-detail views.",
-      "html": "<section class=\"ds-data-surface\"><strong>Chikara Core API</strong><span>2 applications</span></section>",
+      "html": "<section class=\"ds-data-surface\"><strong>Core API</strong><span>2 applications</span></section>",
       "css": ".ds-data-surface { display: grid; gap: 4px; padding: 16px; border: 1px solid #dce1e8; border-radius: 12px; background: #fff; color: #172033; font: 400 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-data-surface strong { font-weight: 700; } .ds-data-surface span { color: #5c667a; font-size: 13px; } .ds-data-surface:hover { background: #fcfcfd; }"
     },
     {
@@ -118,7 +118,7 @@
   ],
   "narrative": {
     "northStar": "The Identity Workbench",
-    "overview": "Chikara is a compact operations console: dependable, direct, and quiet enough to keep attention on identity data. Auth0 supplies the familiar management grammar while Cloudflare supplies the dense, infrastructure-oriented workbench. Brand appears through ink navy, paper-white working surfaces, and a rare warm-orange signal.\n\nThe system avoids a generic dashboard of decorative metric cards. APIs and their Applications are the organizing relationship, with lists and details kept close enough to support fast operational comparison.\n\nAuthentication uses the same visual world at a more declarative scale: a dark identity field holds product and security context while a white credential sheet keeps the one-way bootstrap or sign-in task focused.",
+    "overview": "Otakuma Auth is a compact operations console: dependable, direct, and quiet enough to keep attention on identity data. Auth0 supplies the familiar management grammar while Cloudflare supplies the dense, infrastructure-oriented workbench. Brand appears through ink navy, paper-white working surfaces, and a rare warm-orange signal.\n\nThe system avoids a generic dashboard of decorative metric cards. APIs and their Applications are the organizing relationship, with lists and details kept close enough to support fast operational comparison.\n\nAuthentication uses the same visual world at a more declarative scale: a dark identity field holds product and security context while a white credential sheet keeps the one-way bootstrap or sign-in task focused.",
     "keyCharacteristics": [
       "Compact tables",
       "Strong information hierarchy",

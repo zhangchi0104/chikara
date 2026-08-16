@@ -18,7 +18,7 @@ export function createAuthOptions(
   policy: AuthRuntimePolicy = {},
 ) {
   return {
-    appName: "Chikara",
+    appName: "Otakuma Auth",
     basePath: AUTH_BASE_PATH,
     baseURL: config.baseUrl,
     disabledPaths: ["/token"],

@@ -1,4 +1,4 @@
-# Chikara Auth Dashboard
+# Otakuma Auth Dashboard
 
 An Astro server-rendered operations console deployed to Cloudflare Workers. It
 manages the auth Worker's users, protected APIs, and OAuth Applications through

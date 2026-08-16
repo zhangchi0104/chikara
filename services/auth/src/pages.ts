@@ -1,3 +1,5 @@
+export { signUpPage } from "./sign-up-page.js";
+
 const requestScript = `
 const query = new URLSearchParams(window.location.search);
 const signedParameterNames = new Set(query.getAll("ba_param"));
@@ -39,7 +41,7 @@ function page(title: string, body: string, script: string): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${title} · Chikara</title>
+    <title>${title} · Otakuma Auth</title>
     <style>
       :root { color-scheme: light dark; font: 16px/1.5 system-ui, sans-serif; }
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: Canvas; color: CanvasText; }
@@ -64,7 +66,7 @@ function page(title: string, body: string, script: string): string {
 export function signInPage(): string {
   return page(
     "Sign in",
-    `<h1>Sign in to Chikara</h1>
+    `<h1>Sign in to Otakuma Auth</h1>
     <form data-form>
       <label>Email <input name="email" type="email" autocomplete="email" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
@@ -82,34 +84,6 @@ document.querySelector("[data-form]").addEventListener("submit", async (event) =
       email: values.get("email"),
       password: values.get("password"),
       rememberMe: true,
-    });
-  } catch (error) { showError(error); }
-});`,
-  );
-}
-
-export function signUpPage(): string {
-  return page(
-    "Create account",
-    `<h1>Create a Chikara account</h1>
-    <form data-form>
-      <label>Name <input name="name" autocomplete="name" required></label>
-      <label>Email <input name="email" type="email" autocomplete="email" required></label>
-      <label>Password <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
-      <button type="submit">Create account</button>
-      <p data-error hidden></p>
-    </form>
-    <p class="muted">Already registered? <a data-sign-in href="/sign-in">Sign in</a></p>`,
-    `
-document.querySelector("[data-sign-in]").search = window.location.search;
-document.querySelector("[data-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const values = new FormData(event.currentTarget);
-  try {
-    await request("/api/auth/sign-up/email", {
-      name: values.get("name"),
-      email: values.get("email"),
-      password: values.get("password"),
     });
   } catch (error) { showError(error); }
 });`,

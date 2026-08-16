@@ -63,7 +63,7 @@ const selected = apis.find((api) => api.id === selectedId);
   <Dialog id="create-api" title="Create API" description="Define the audience your Applications will request.">
     <form action="/actions/dashboard/apis" method="post" data-enhance>
       <input type="hidden" name="_returnTo" value="/apis" />
-      <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Chikara Core API" /></label>
+      <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Core API" /></label>
       <label class="field"><span>Identifier</span><input name="identifier" type="url" required placeholder="https://api.example.com" /><small>This becomes the OAuth audience and must be unique.</small></label>
       <label class="field"><span>Description</span><textarea name="description" maxlength="500" placeholder="What this API protects"></textarea></label>
       <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Create API</button></div>
