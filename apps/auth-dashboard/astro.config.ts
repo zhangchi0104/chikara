@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import cloudflare from "@astrojs/cloudflare";
+import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
@@ -21,6 +22,7 @@ export default defineConfig({
     imageService: "compile",
     persistState: { path: authStatePath },
   }),
+  integrations: [react()],
   output: "server",
   server: { port: 4321 },
   vite: {

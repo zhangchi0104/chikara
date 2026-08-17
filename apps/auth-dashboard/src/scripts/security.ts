@@ -3,12 +3,18 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import {
+  accountProtection,
+  authenticatorStateChangedEvent,
+} from "../lib/account-protection.js";
+import type { TwoFactorState } from "../lib/models.js";
+import {
   type PasskeySummary,
   passkeyError,
   passkeyList,
   registrationOptions,
   registrationResponseBody,
 } from "../lib/passkey.js";
+import { twoFactorState } from "../lib/two-factor.js";
 import { elementFinder, requestJSON } from "./browser.js";
 import { hideDialog, showDialog } from "./dialog.js";
 
@@ -44,8 +50,11 @@ function ceremonyMessage(error: unknown): string {
 }
 
 class PasskeyManager {
+  #authenticatorState: TwoFactorState;
   readonly #empty: HTMLElement;
   readonly #list: HTMLElement;
+  readonly #mfaBadge: HTMLElement;
+  readonly #mfaStatus: HTMLElement;
   readonly #registerDialog: HTMLDialogElement;
   readonly #registerError: HTMLElement;
   readonly #registerForm: HTMLFormElement;
@@ -53,13 +62,29 @@ class PasskeyManager {
   readonly #renameDialog: HTMLDialogElement;
   readonly #renameError: HTMLElement;
   readonly #renameForm: HTMLFormElement;
+  readonly #root: HTMLElement;
   readonly #status: HTMLElement;
   readonly #support: HTMLElement;
+  #passkeyCount: number;
   #passkeys: ReadonlyArray<PasskeySummary> = [];
 
   constructor(root: HTMLElement) {
+    const authenticatorState = twoFactorState(root.dataset.authenticatorState);
+    const passkeyCount = Number(root.dataset.passkeyCount);
+    if (
+      !authenticatorState ||
+      !Number.isSafeInteger(passkeyCount) ||
+      passkeyCount < 0
+    ) {
+      throw new Error("Account protection state is invalid.");
+    }
+    this.#authenticatorState = authenticatorState;
+    this.#passkeyCount = passkeyCount;
+    this.#root = root;
     this.#empty = required(root, "[data-passkey-empty]");
     this.#list = required(root, "[data-passkey-list]");
+    this.#mfaBadge = required(root, "[data-mfa-badge]");
+    this.#mfaStatus = required(root, "[data-mfa-status]");
     this.#registerForm = required(root, "[data-passkey-register-form]");
     this.#renameForm = required(root, "[data-passkey-rename-form]");
     this.#registerTrigger = required(root, "[data-passkey-register-trigger]");
@@ -101,9 +126,17 @@ class PasskeyManager {
         void this.register();
       });
     }
+    this.renderProtection();
     this.#renameForm.addEventListener("submit", (event) => {
       event.preventDefault();
       void this.rename();
+    });
+    this.#root.addEventListener(authenticatorStateChangedEvent, (event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const state = twoFactorState(event.detail);
+      if (!state || state === this.#authenticatorState) return;
+      this.#authenticatorState = state;
+      this.renderProtection();
     });
     this.#list.addEventListener("click", (event) => {
       const target = event.target;
@@ -139,6 +172,7 @@ class PasskeyManager {
         throw new Error("The passkey list response was incomplete.");
       }
       this.#passkeys = passkeys;
+      this.#passkeyCount = passkeys.length;
       this.render();
       this.setStatus(
         passkeys.length
@@ -152,6 +186,7 @@ class PasskeyManager {
   }
 
   private render(): void {
+    this.renderProtection();
     this.#empty.hidden = this.#passkeys.length > 0;
     this.#list.hidden = this.#passkeys.length === 0;
     this.#list.replaceChildren(
@@ -193,6 +228,19 @@ class PasskeyManager {
     );
   }
 
+  private renderProtection(): void {
+    const presentation = accountProtection(
+      this.#passkeyCount,
+      this.#authenticatorState,
+    );
+    this.#mfaBadge.textContent = presentation.badge;
+    this.#mfaBadge.classList.toggle("warning", presentation.tone === "warning");
+    if (this.#mfaStatus.textContent !== presentation.message) {
+      this.#mfaStatus.textContent = presentation.message;
+    }
+    this.#mfaStatus.dataset.state = presentation.tone;
+  }
+
   private async register(): Promise<void> {
     const submit = required<HTMLButtonElement>(
       this.#registerForm,
@@ -213,6 +261,8 @@ class PasskeyManager {
         ...(name ? { name } : {}),
         response: registrationResponseBody(credential),
       });
+      this.#passkeyCount += 1;
+      this.renderProtection();
       this.#registerForm.reset();
       hideDialog(this.#registerDialog);
       await this.load();
@@ -264,6 +314,11 @@ class PasskeyManager {
       await passkeyRequest("/api/auth/passkey/delete-passkey", {
         id: button.dataset.passkeyId,
       });
+      this.#passkeys = this.#passkeys.filter(
+        (passkey) => passkey.id !== button.dataset.passkeyId,
+      );
+      this.#passkeyCount = Math.max(0, this.#passkeyCount - 1);
+      this.render();
       await this.load();
     } catch (error) {
       this.setStatus(ceremonyMessage(error), "error");

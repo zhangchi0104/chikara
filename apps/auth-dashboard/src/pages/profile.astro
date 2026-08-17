@@ -1,6 +1,5 @@
 ---
-import TwoFactorPanel from "../components/TwoFactorPanel.astro";
-import ProfileLayout from "../layouts/ProfileLayout.astro";
+import AccountLayout from "../layouts/AccountLayout.astro";
 import { formatDate, initials } from "../lib/models.js";
 
 const account = Astro.locals.account;
@@ -12,7 +11,12 @@ const detailValueClasses =
   "m-0 flex min-w-0 flex-wrap items-center gap-2 font-[620] [overflow-wrap:anywhere]";
 ---
 
-<ProfileLayout account={account} title="Profile" description="Your identity and access in Otakuma Auth.">
+<AccountLayout
+  account={account}
+  active="profile"
+  title="Profile"
+  description="Your identity and access in Otakuma Auth."
+>
   <section
     class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[18px] rounded-surface border border-line bg-paper p-[clamp(22px,4vw,32px)] profile-compact:grid-cols-[auto_minmax(0,1fr)]"
   >
@@ -74,10 +78,4 @@ const detailValueClasses =
       </div>
     </dl>
   </section>
-
-  <TwoFactorPanel
-    idPrefix="profile-two-factor"
-    profile
-    state={account.user.twoFactorState}
-  />
-</ProfileLayout>
+</AccountLayout>

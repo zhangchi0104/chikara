@@ -10,8 +10,8 @@
   },
   "scripts": {
     "build": "wrangler deploy --dry-run --outdir dist",
-    "dev": "wrangler dev --port 8788 --inspector-port 9230 --persist-to .wrangler/state",
-    "deploy": "wrangler deploy --minify",
+    "dev": "bun run db:migrate:local && wrangler dev --port 8788 --inspector-port 9230 --persist-to .wrangler/state",
+    "deploy": "wrangler deploy --minify --var AUTH_ALLOW_DYNAMIC_CLIENT_REGISTRATION:false --var AUTH_PASSKEY_RP_ID:auth.otakuma.dev --var AUTH_TRUSTED_ORIGINS:https://dashboard.auth.otakuma.dev,chikara:// --var BETTER_AUTH_URL:https://chikara.auth.otakuma.dev",
     "cf-typegen": "wrangler types --env-interface AuthCloudflareBindings",
     "db:create:remote": "bun ./scripts/create-d1.ts",
     "db:generate": "node ./node_modules/.bin/auth generate --config ./scripts/auth-schema.ts --output ./auth-schema.sql --yes",

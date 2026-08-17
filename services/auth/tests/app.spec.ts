@@ -4,6 +4,12 @@ import { createApp } from "../src/app.js";
 
 function forwardedRequestHandler(request: Request): Response {
   const url = new URL(request.url);
+  if (url.pathname === "/api/auth/two-factor/methods") {
+    return Response.json({
+      twoFactorMethods: ["totp"],
+      twoFactorRedirect: true,
+    });
+  }
   return Response.json({ method: request.method, path: url.pathname });
 }
 
@@ -86,6 +92,10 @@ describe("auth", () => {
       expect(signInHtml).toMatch(/Sign in to Otakuma Auth/);
       expect(signInHtml).toContain('form method="post"');
       expect(signInHtml).toContain("payload.twoFactorRedirect === true");
+      expect(signInHtml).toContain(
+        "/api/auth/passkey/generate-authenticate-options",
+      );
+      expect(signInHtml).toContain("/api/auth/passkey/verify-authentication");
       const twoFactorHtml = yield* Effect.promise(() => twoFactor.text());
       expect(twoFactorHtml).toContain(
         "<title>Verify your sign-in · Otakuma Auth</title>",
@@ -95,6 +105,36 @@ describe("auth", () => {
         "/api/auth/two-factor/verify-backup-code",
       );
       expect(twoFactorHtml).toContain('name="factor"');
+      const passkeyTwoFactor = yield* Effect.promise(() =>
+        Promise.resolve(app.request("/two-factor?method=passkey")),
+      );
+      const passkeyTwoFactorHtml = yield* Effect.promise(() =>
+        passkeyTwoFactor.text(),
+      );
+      expect(passkeyTwoFactorHtml).not.toContain(
+        '<button type="button" data-passkey-verification',
+      );
+      expect(passkeyTwoFactorHtml).toContain(
+        "/api/auth/two-factor/verify-totp",
+      );
+      const passkeyApp = createApp(() =>
+        Response.json({
+          twoFactorMethods: ["passkey"],
+          twoFactorRedirect: true,
+        }),
+      );
+      const authoritativePasskey = yield* Effect.promise(() =>
+        Promise.resolve(passkeyApp.request("/two-factor?method=totp")),
+      );
+      const authoritativePasskeyHtml = yield* Effect.promise(() =>
+        authoritativePasskey.text(),
+      );
+      expect(authoritativePasskeyHtml).toContain(
+        '<button type="button" data-passkey-verification',
+      );
+      expect(authoritativePasskeyHtml).not.toContain(
+        "/api/auth/two-factor/verify-totp",
+      );
       const consentHtml = yield* Effect.promise(() => consent.text());
       expect(consentHtml).toContain("<title>Authorize · Otakuma Auth</title>");
       expect(consentHtml).toMatch(/Authorize this Application/);
@@ -140,7 +180,7 @@ describe("auth", () => {
 
       expect(response.status).toBe(303);
       expect(response.headers.get("location")).toBe(
-        "http://localhost/two-factor?sig=signed&ba_param=client_id&ba_param=scope&client_id=client-1&scope=openid+profile",
+        "http://localhost/two-factor?sig=signed&ba_param=client_id&ba_param=scope&client_id=client-1&scope=openid+profile&method=totp",
       );
       expect(response.headers.get("set-cookie")).toContain(
         "better-auth.two_factor=challenge",

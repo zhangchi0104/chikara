@@ -104,6 +104,24 @@ describe("auth configuration", () => {
     }),
   );
 
+  it.effect("accepts the production auth and dashboard origins", () =>
+    Effect.sync(() => {
+      const { secret: _secret, ...config } = readAuthConfig({
+        ...validBindings,
+        AUTH_PASSKEY_RP_ID: "auth.otakuma.dev",
+        AUTH_TRUSTED_ORIGINS: "https://dashboard.auth.otakuma.dev,chikara://",
+        BETTER_AUTH_URL: "https://chikara.auth.otakuma.dev",
+      });
+
+      expect(config).toEqual({
+        allowDynamicClientRegistration: false,
+        baseUrl: "https://chikara.auth.otakuma.dev",
+        passkeyRpId: "auth.otakuma.dev",
+        trustedOrigins: ["https://dashboard.auth.otakuma.dev", "chikara://"],
+      });
+    }),
+  );
+
   it.effect("rejects a passkey RP ID that cannot serve a trusted origin", () =>
     Effect.sync(() => {
       expect(() =>

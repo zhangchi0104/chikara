@@ -1,9 +1,18 @@
 import { createAuth } from "../auth.js";
+import type { AuthEventCursor } from "../auth-audit/auth-audit.models.js";
+import { listAuthEvents } from "../auth-audit/auth-audit.store.js";
 import type { AuthBindings } from "../configs/auth.config.js";
 import { authEffect, storageEffect } from "./dashboard.effect.js";
-import type { DashboardUser } from "./dashboard.models.js";
+import { DashboardError } from "./dashboard.error.js";
+import type { DashboardUser, DashboardUserDetail } from "./dashboard.models.js";
 
 interface UserRow extends Omit<DashboardUser, "emailVerified"> {
+  readonly emailVerified: number;
+}
+
+interface UserProfileRow
+  extends Omit<DashboardUserDetail["user"], "administrator" | "emailVerified"> {
+  readonly administrator: number;
   readonly emailVerified: number;
 }
 
@@ -21,6 +30,37 @@ export function listUsers(database: D1Database) {
       ...row,
       emailVerified: Boolean(row.emailVerified),
     }));
+  });
+}
+
+export function getUserDetail(
+  database: D1Database,
+  userId: string,
+  cursor?: AuthEventCursor,
+) {
+  return storageEffect("read user profile", async () => {
+    const row = await database
+      .prepare(
+        `SELECT u.id, u.name, u.email, u.image, u.emailVerified, u.createdAt,
+         (SELECT COUNT(*) FROM session s WHERE s.userId = u.id) AS sessionCount,
+         EXISTS(
+           SELECT 1 FROM dashboardSuperuser superuser
+           WHERE superuser.userId = u.id
+         ) AS administrator
+         FROM "user" u WHERE u.id = ?`,
+      )
+      .bind(userId)
+      .first<UserProfileRow>();
+    if (!row) throw new DashboardError(404, "User not found.");
+    const activity = await listAuthEvents(database, userId, cursor);
+    return {
+      activity,
+      user: {
+        ...row,
+        administrator: Boolean(row.administrator),
+        emailVerified: Boolean(row.emailVerified),
+      },
+    } satisfies DashboardUserDetail;
   });
 }
 

@@ -1,3 +1,4 @@
+import { authenticatorStateChangedEvent } from "../lib/account-protection.js";
 import {
   backupCodeResult,
   setupSecret,
@@ -227,7 +228,7 @@ class OtakumaTwoFactorElement extends HTMLElement {
       account === "pending" ? "Restart setup" : "Set up authenticator";
     reset.hidden = enrolling || account === "disabled";
     reset.textContent =
-      account === "enabled" ? "Disable two-factor" : "Reset setup";
+      account === "enabled" ? "Disable authenticator" : "Reset setup";
     reset.classList.toggle("button-danger", account === "enabled");
     required<HTMLElement>(this, "[data-two-factor-recovery]").hidden =
       account !== "enabled";
@@ -239,6 +240,12 @@ class OtakumaTwoFactorElement extends HTMLElement {
     ).disabled = current.kind === "enrolling" && current.verifying;
     this.renderEnrollment();
     this.renderRecovery();
+    this.dispatchEvent(
+      new CustomEvent(authenticatorStateChangedEvent, {
+        bubbles: true,
+        detail: account,
+      }),
+    );
   }
 
   private renderEnrollment(): void {

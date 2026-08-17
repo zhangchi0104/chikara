@@ -1,0 +1,173 @@
+---
+import Icon from "../../components/Icon.astro";
+import ReadError from "../../components/ReadError.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { getUserDetail } from "../../lib/auth.js";
+import {
+  formatDate,
+  formatDateTime,
+  initials,
+  type UserActivityCursor,
+  type UserActivityType,
+} from "../../lib/models.js";
+
+const superuser = Astro.locals.account.user;
+const userId = Astro.params.id ?? "";
+const result = await getUserDetail(Astro.request, userId);
+const detail = result.data;
+const user = detail?.user;
+const isMissing = result.status === 404;
+if (!detail) Astro.response.status = isMissing ? 404 : 502;
+Astro.response.headers.set("cache-control", "no-store");
+
+let pageTitle = "User profile";
+if (isMissing) pageTitle = "User not found";
+else if (user) pageTitle = user.name;
+
+const activityCopy: Record<
+  UserActivityType,
+  { readonly description: string; readonly label: string }
+> = {
+  "account.provisioned": {
+    description: "The Otakuma Auth account was created.",
+    label: "Account created",
+  },
+  "account.signed_up": {
+    description: "The user completed self-service signup.",
+    label: "Signed up",
+  },
+  "login.succeeded": {
+    description: "Authentication completed and a session was issued.",
+    label: "Signed in",
+  },
+  "password.changed": {
+    description: "The account password was changed.",
+    label: "Password changed",
+  },
+  "two_factor.auto_repaired": {
+    description: "Otakuma Auth removed an unusable two-factor configuration during sign-in.",
+    label: "Two-factor repaired",
+  },
+  "two_factor.disabled": {
+    description: "Authenticator-code protection was disabled.",
+    label: "Two-factor disabled",
+  },
+  "two_factor.enabled": {
+    description: "Authenticator-code protection was verified and enabled.",
+    label: "Two-factor enabled",
+  },
+  "two_factor.recovery_codes_regenerated": {
+    description: "The previous recovery codes were replaced.",
+    label: "Recovery codes replaced",
+  },
+  "two_factor.setup_reset": {
+    description: "An incomplete authenticator setup was removed.",
+    label: "Two-factor setup reset",
+  },
+  "two_factor.setup_started": {
+    description: "A new authenticator setup key was generated.",
+    label: "Two-factor setup started",
+  },
+};
+
+function activityUrl(cursor: UserActivityCursor): string {
+  const query = new URLSearchParams({
+    before: `${cursor.occurredAt}`,
+    beforeId: cursor.id,
+  });
+  return `/users/${encodeURIComponent(userId)}?${query}`;
+}
+
+const viewingOlderActivity = Astro.url.searchParams.has("before");
+const detailRowClasses =
+  "grid min-h-[58px] grid-cols-[150px_minmax(0,1fr)] items-center gap-5 border-b border-[#e8ebf0] px-6 py-3 last:border-b-0 mobile:grid-cols-1 mobile:gap-1 mobile:px-[18px]";
+---
+
+<DashboardLayout
+  active="users"
+  title={pageTitle}
+  description={user ? "Identity details and recent authentication activity for this account." : "Review an Otakuma Auth account."}
+  user={superuser}
+>
+  {!detail && isMissing && (
+    <section class="data-surface read-error">
+      <h2>This user no longer exists</h2>
+      <p>The account may have been deleted since the Users list was loaded.</p>
+      <a class="button button-primary" href="/users">Return to Users</a>
+    </section>
+  )}
+  {!detail && !isMissing && <ReadError resource="User profile" />}
+  {detail && (
+    <div class="grid gap-[18px]">
+      <a class="inline-flex w-fit items-center gap-1.5 font-bold text-signal hover:text-[var(--signal-hover)]" href="/users">
+        <span class="grid rotate-180"><Icon name="arrow" size={16} /></span>
+        Back to Users
+      </a>
+
+      <section class="overflow-hidden rounded-surface border border-line bg-paper" aria-labelledby="profile-details-title">
+        <header class="flex items-center gap-[18px] border-b border-line p-6 mobile:grid mobile:grid-cols-[56px_minmax(0,1fr)] mobile:items-start mobile:px-[18px]">
+          <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-nav text-lg font-bold text-white" aria-hidden="true">
+            {initials(detail.user.name)}
+          </span>
+          <div class="min-w-0 flex-1">
+            <h2 class="m-0 text-[21px] tracking-[-0.02em] [overflow-wrap:anywhere]" id="profile-details-title">{detail.user.name}</h2>
+            <p class="mt-0.5 mb-0 text-ink-soft [overflow-wrap:anywhere]">{detail.user.email}</p>
+          </div>
+          <div class="flex flex-wrap gap-2 mobile:col-start-2">
+            <span class:list={["badge", { neutral: !detail.user.emailVerified }]}>
+              {detail.user.emailVerified ? "Verified" : "Not verified"}
+            </span>
+            <span class="badge neutral">{detail.user.administrator ? "Administrator" : "Member"}</span>
+          </div>
+        </header>
+        <dl class="m-0">
+          <div class={detailRowClasses}><dt class="text-xs text-ink-soft">Active sessions</dt><dd class="m-0 font-[620]">{detail.user.sessionCount}</dd></div>
+          <div class={detailRowClasses}><dt class="text-xs text-ink-soft">Member since</dt><dd class="m-0 font-[620]">{formatDate(detail.user.createdAt)}</dd></div>
+          <div class={detailRowClasses}><dt class="text-xs text-ink-soft">User ID</dt><dd class="m-0 min-w-0 [overflow-wrap:anywhere]"><code class="code">{detail.user.id}</code></dd></div>
+        </dl>
+      </section>
+
+      <section class="data-surface" aria-labelledby="activity-title">
+        <header class="flex items-start justify-between gap-5 border-b border-line px-6 pt-[22px] pb-[18px] mobile:px-[18px]">
+          <div>
+            <h2 class="m-0 text-[21px] tracking-[-0.02em]" id="activity-title">Account activity</h2>
+            <p class="mt-1.5 mb-0 max-w-[65ch] text-ink-soft">Successful account and authentication changes recorded by Otakuma Auth.</p>
+          </div>
+          {viewingOlderActivity && <a class="button button-small shrink-0" href={`/users/${encodeURIComponent(userId)}`}>Newest</a>}
+        </header>
+        {detail.activity.events.length === 0 ? (
+          <div class="px-6 py-10 text-center mobile:px-[18px]">
+            <h3 class="m-0 text-base">No activity in this range</h3>
+            <p class="mt-1.5 mb-0 text-ink-soft">Earlier activity was not recorded before this history was introduced.</p>
+          </div>
+        ) : (
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Account activity, newest first</caption>
+              <thead><tr><th>Action</th><th>Initiated by</th><th>Occurred</th></tr></thead>
+              <tbody>
+                {detail.activity.events.map((event) => (
+                  <tr>
+                    <td>
+                      <div class="grid gap-0.5">
+                        <strong>{activityCopy[event.eventType].label}</strong>
+                        <small class="text-ink-soft">{activityCopy[event.eventType].description}</small>
+                      </div>
+                    </td>
+                    <td data-label="Initiated by">{event.actorName ?? "Otakuma Auth"}</td>
+                    <td data-label="Occurred"><time datetime={new Date(event.occurredAt).toISOString()}>{formatDateTime(event.occurredAt)}</time></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {detail.activity.nextCursor && (
+          <footer class="flex justify-end border-t border-line px-6 py-4 mobile:px-[18px]">
+            <a class="button button-small" href={activityUrl(detail.activity.nextCursor)}>Older activity <Icon name="arrow" size={16} /></a>
+          </footer>
+        )}
+      </section>
+    </div>
+  )}
+</DashboardLayout>

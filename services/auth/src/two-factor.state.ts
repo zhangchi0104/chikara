@@ -41,7 +41,7 @@ async function readSnapshot(
          COUNT(t."id") AS "factorCount",
          COALESCE(SUM(
            CASE
-             WHEN t."id" IS NOT NULL AND COALESCE(t."verified", 1) = 1
+             WHEN t."id" IS NOT NULL AND t."verified" = 1
              THEN 1 ELSE 0
            END
          ), 0) AS "verifiedCount"

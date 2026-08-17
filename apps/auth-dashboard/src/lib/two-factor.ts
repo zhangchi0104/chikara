@@ -14,13 +14,13 @@ export const twoFactorPresentation: Record<
   }
 > = {
   disabled: {
-    badge: "Not enabled",
-    message: "Add an authenticator app to strengthen your next sign-in.",
+    badge: "Not set up",
+    message: "Add an authenticator app as another verification method.",
     tone: "warning",
   },
   enabled: {
-    badge: "Enabled",
-    message: "Authenticator codes are required after password sign-in.",
+    badge: "Ready",
+    message: "Authenticator codes can verify password sign-ins.",
     tone: "ready",
   },
   inconsistent: {

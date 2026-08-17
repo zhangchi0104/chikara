@@ -1,5 +1,7 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "./foundation.css" layer(base);
 @import "./workspace.css" layer(components);
 @import "./auth.css" layer(components);
@@ -8,13 +10,59 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 @theme inline {
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-background: var(--background);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-destructive: var(--destructive);
+  --color-foreground: var(--foreground);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-input: var(--input);
   --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-nav: var(--nav);
   --color-paper: var(--paper);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-signal: var(--signal);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.6);
   --radius-surface: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  --accent: #f1f3f6;
+  --accent-foreground: var(--ink);
+  --background: var(--canvas);
+  --border: var(--line);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --destructive: var(--danger);
+  --foreground: var(--ink);
+  --input: var(--line-strong);
+  --muted: #f1f3f6;
+  --muted-foreground: var(--ink-soft);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--signal);
+  --primary-foreground: var(--paper);
+  --ring: var(--focus);
+  --secondary: #eef1f5;
+  --secondary-foreground: var(--ink);
 }
 
 @custom-variant mobile (@media (width <= 820px));

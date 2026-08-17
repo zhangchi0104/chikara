@@ -2,7 +2,7 @@
 import type { Superuser } from "../lib/models.js";
 import { managementRoutes, type ManagementPageId } from "../lib/navigation.js";
 import Icon from "../components/Icon.astro";
-import ProfileMenu from "../components/ProfileMenu.astro";
+import ProfileMenu from "../components/ProfileMenu";
 import "../styles/global.css";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 }
 
 const { active, description, title, user } = Astro.props;
+const profileMenuUser = { email: user.email, name: user.name };
 ---
 
 <!doctype html>
@@ -52,7 +53,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           ))}
         </nav>
         <div class="sidebar-foot">
-          <ProfileMenu id="sidebar-account-menu" label="Administrator" tone="dark" user={user} />
+          <ProfileMenu client:load id="sidebar-account-menu" label="Administrator" tone="dark" user={profileMenuUser} />
         </div>
       </aside>
       <main class="workspace">
@@ -64,7 +65,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <div class="flex items-center gap-2.5">
             <slot name="actions" />
             <div class="hidden mobile:block">
-              <ProfileMenu compact id="mobile-account-menu" label="Administrator" user={user} />
+              <ProfileMenu client:load compact id="mobile-account-menu" label="Administrator" user={profileMenuUser} />
             </div>
           </div>
         </header>
@@ -81,6 +82,5 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </nav>
     <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
     <script src="../scripts/dashboard.ts"></script>
-    <script src="../scripts/profile-menu.ts"></script>
   </body>
 </html>

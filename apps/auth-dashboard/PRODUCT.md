@@ -41,9 +41,16 @@ the only superuser. Later visits use the Better Auth session.
   term; OAuth client records appear as Applications.
 - Profile is the default authenticated page for a member; the management
   dashboard remains the default for the superuser.
-- Every signed-in member can enroll, disable, and refresh recovery codes for
-  their own TOTP two-factor authentication from Profile.
+- Every signed-in member can manage Passkeys, an authenticator app, and recovery
+  codes from Account Security. Either a Passkey or verified authenticator app
+  makes the account's MFA protection enabled.
+- A registered Passkey protects later password sign-ins as a second factor;
+  Passkey-first sign-in satisfies MFA through required device user verification.
+- A password challenge accepts only a Passkey owned by the account that passed
+  the password check. Verified TOTP and recovery codes remain alternatives.
 - Only the single superuser may access management data or actions.
+- The superuser can inspect another user's read-only profile and bounded account
+  activity without receiving that user's personal Security controls.
 - Management access is computed by the auth Worker and never inferred from a
   browser-supplied role.
 - The current superuser cannot delete themselves or revoke their own active
@@ -56,7 +63,8 @@ the only superuser. Later visits use the Better Auth session.
   acknowledgement before dismissal.
 - Workers KV holds the expiring bootstrap token digest. D1 provides the atomic
   consumption record because KV is eventually consistent.
-- The auth Worker owns users, APIs, applications, sessions, and bootstrap state.
+- The auth Worker owns users, account activity, APIs, applications, sessions,
+  and bootstrap state.
 
 ## Brand Commitments
 
@@ -79,5 +87,7 @@ should be fabricated.
 - Put irreversible consequences next to the action that causes them.
 - Keep credentials transient and make secure handling explicit.
 - Keep self-service account security separate from administrator authority.
+- Present administrator account inspection as a management view, never as an
+  impersonated personal account page.
 - Treat bootstrap as a one-way transition into normal authenticated operation.
 - Favor operational density that remains comfortable on desktop and mobile.

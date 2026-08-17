@@ -20,8 +20,9 @@ Never guess at Effect patterns - check the guide first.
 ## Development flow
 
 Copy `.dev.vars.example` to `.dev.vars`, replace `BETTER_AUTH_SECRET`, then run
-`bun run db:migrate:local` followed by `bun run dev`. The auth Worker listens on
-port `8788` with inspector port `9230` so it can run beside the gateway. Use
+`bun run dev`; the command applies pending local D1 migrations before starting.
+The auth Worker listens on port `8788` with inspector port `9230` so it can run
+beside the gateway. Use
 `bun run build` to bundle without deploying and `bun run cf-typegen` after
 changing bindings in `wrangler.jsonc`.
 
@@ -40,6 +41,13 @@ creation flags can be appended, for example
 `bun run db:create:remote -- --location oc`. Then store `BETTER_AUTH_SECRET`
 with `wrangler secret put` and apply `bun run db:migrate:remote`. The issuer is
 `$BETTER_AUTH_URL/api/auth`.
+
+Production domains are source-controlled in the Wrangler files and the auth
+deploy command supplies their non-secret runtime values. The auth Worker has no
+public `workers.dev` endpoint; the gateway exposes it at
+`https://chikara.auth.otakuma.dev`, while the account dashboard uses
+`https://dashboard.auth.otakuma.dev`. Both browser origins share the scoped
+WebAuthn RP ID `auth.otakuma.dev`. Keep localhost overrides in `.dev.vars`.
 
 ## Service boundaries
 

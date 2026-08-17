@@ -109,10 +109,9 @@ personal scale. A dark account rail anchors a paper-white identity ledger so
 members can verify who they are and protect their sign-in; management entry
 remains an administrator-only affordance.
 
-Account protection is expressed once through a shared state-driven panel. It
-sits below the personal Profile record for every member and beside Passkeys on
-the administrator Security page without changing its setup or recovery
-contract.
+Account protection is expressed through a dedicated Security destination for
+every member. An aggregate MFA summary leads the page, followed by separate
+authenticator-app and Passkey methods without changing setup or recovery.
 
 **Key characteristics:**
 
@@ -123,7 +122,7 @@ contract.
 - Explicit destructive states.
 - Responsive master-detail navigation.
 - Focused personal identity records.
-- Shared state-driven account security.
+- Dedicated state-driven account security.
 
 ## Colors
 
@@ -168,26 +167,29 @@ detail headings authority while uppercase micro-labels support scanning.
 
 Desktop uses a sticky 240px navigation rail and a fluid workspace with
 `24–64px` horizontal padding. APIs and Applications use a 38/62 master-detail
-split; Users use a full-width table. At 820px the rail becomes a fixed bottom
-navigation and details become drill-in views. At 520px multi-column forms stack
-and create actions collapse to their icons.
+split; Users use a full-width table that drills into a read-only management
+profile and chronological account activity. The inspected-user page remains in
+the management shell and never inherits the personal Security navigation. At
+820px the rail becomes a fixed bottom navigation and details become drill-in
+views. At 520px multi-column forms stack and create actions collapse to their
+icons.
 
 Bootstrap and sign-in use a two-part desktop shell: a fluid dark context field
 beside a 440–620px white form sheet. At 820px the shell stacks, shortens the
 context field, and removes supporting copy before the form.
 
-Personal profile surfaces use a persistent 240px account rail and a centered
-identity workspace. The rail contains only Profile, an administrator-only path
+Personal account surfaces use a persistent 240px account rail and a centered
+workspace. The rail contains Profile and Security, an administrator-only path
 back to management, and the account menu; it never exposes management
 navigation to a member. At 820px it collapses into a compact dark product bar.
-At compact widths, definition rows stack labels over values and visible labels
-may collapse to icons, but accessible names and full hit targets remain.
+At compact widths, definition rows stack labels over values and visible
+navigation labels may collapse to icons, but accessible names and full hit
+targets remain.
 
-The shared two-factor panel spans the Profile workspace below identity content
-and occupies one column beside Passkeys in the administrator Security grid. The
-Security grid becomes one column below 980px. At 520px, setup controls stack,
-small actions retain a 44px minimum height, and recovery codes collapse from
-two columns to one.
+The dedicated Security workspace leads with the account's aggregate MFA state,
+then stacks the authenticator-app and Passkey methods. At 520px, setup controls
+stack, small actions retain a 44px minimum height, and recovery codes collapse
+from two columns to one.
 
 Spacing follows a practical 4/8/16/24/40px rhythm. Dense data rows retain at
 least 42px control height and generous dialog padding.
@@ -232,9 +234,9 @@ them and also surface through the live toast region.
 
 Desktop navigation is dark, compact, and persistent. The active item receives
 a tonal navy fill and orange icon. Mobile navigation uses the same visual roles
-in a three-column bottom bar. Profile uses the same rail vocabulary with only
-personal account navigation; on mobile it becomes a compact top bar rather
-than a one-item bottom navigation. The account trigger carries avatar, account
+in a three-column bottom bar. Personal account pages use the same rail
+vocabulary with Profile and Security; on mobile it becomes a compact top bar
+rather than a bottom navigation. The account trigger carries avatar, account
 name, and access label in roomy contexts; compact contexts retain the avatar
 and an accessible name.
 
@@ -251,13 +253,24 @@ Down wrap among items; Escape closes the menu and restores trigger focus when
 focus was inside; activation outside closes it. Keep `aria-controls`,
 `aria-expanded`, `aria-haspopup="menu"`, and the menu/menuitem roles in sync.
 
-### Two-Factor Authentication
+### Inspected User Profile
 
-The shared two-factor panel keeps the same behavior on Profile and
-administrator Security. Its header pairs an **Enabled** or **Not enabled** badge
-with a live status sentence; the body exposes only actions valid for that
-state. Disabled accounts offer setup. Enabled accounts offer password-confirmed
-disablement and recovery-code regeneration.
+The administrator's user-detail view pairs one identity record with a bounded
+account-activity table ordered newest first. It shows verified status, account
+type, active-session count, creation time, and user ID, then labels successful
+signup, login, password, and two-factor changes in product language. It never
+renders raw event codes, authentication material, passkeys, setup controls, or
+the viewed user's personal Security tab. Historical activity is not invented;
+pre-existing users receive only the account creation fact supported by their
+stored creation time.
+
+### Multi-Factor Authentication
+
+Every member sees the same aggregate MFA summary on Account Security. It is
+**Enabled** when at least one Passkey or verified authenticator app is available
+and updates after either method changes. Method cards keep their own state, so a
+Passkey-protected account can still show that its authenticator app is not set
+up without contradicting the overall protection state.
 
 Enrollment begins with current-password confirmation, then expands into two
 numbered steps: add the manual setup key or open its `otpauth:` deep link, then
@@ -283,6 +296,16 @@ but never send the setup URI to a third-party QR service.
 **The Recovery Acknowledgement Rule.** Keep one-time recovery codes in a locked
 dialog until the member explicitly confirms they are saved.
 
+### Sign-in Verification
+
+A Passkey-first sign-in is complete after the device verifies the member with
+its PIN or biometrics. Password sign-in for an account with a Passkey continues
+to the shared verification screen; it leads with a Passkey bound to that same
+account and offers verified authenticator and recovery methods when available.
+Never show TOTP or recovery as usable for an incomplete authenticator setup.
+Unsupported browsers explain whether another enrolled method is available or
+the member must restart on a Passkey-capable device.
+
 ### Credential Dialog
 
 The newly generated secret appears in a dark monospace block exactly once. The
@@ -301,10 +324,12 @@ acknowledge secure storage before leaving.
 - **Do** place personal identity and access context before account actions.
 - **Do** preserve accessible names and keyboard behavior when account controls
   become compact.
-- **Do** reuse the same two-factor states, setup steps, and recovery behavior on
-  Profile and administrator Security.
+- **Do** keep the aggregate MFA status and each method's state distinct while
+  preserving the same authenticator setup and recovery behavior for every member.
 - **Do** announce asynchronous security status, copy feedback, and adjacent
   errors without moving keyboard focus unexpectedly.
+- **Do** keep inspected-user history read-only, newest first, and explicit about
+  the successful actions that were actually recorded.
 
 ### Don't:
 
@@ -313,6 +338,8 @@ acknowledge secure storage before leaving.
 - **Don't** persist, log, or redisplay an Application credential.
 - **Don't** hide operational data behind hover-only interactions.
 - **Don't** expose administrator navigation or actions to a member account.
+- **Don't** place another user's profile inside the personal Account layout or
+  expose their Security controls to the administrator.
 - **Don't** send an `otpauth:` setup URI to a third-party QR generator.
 - **Don't** allow one-time recovery codes to be dismissed before explicit
   acknowledgement.

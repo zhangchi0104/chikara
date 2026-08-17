@@ -1,9 +1,13 @@
 # Otakuma Auth Dashboard
 
 An Astro server-rendered account and operations console deployed to Cloudflare
-Workers. Signed-in members land on their profile and can enroll their own TOTP
-two-factor authentication; the sole superuser can also manage users, protected
-APIs, and OAuth Applications through the `AUTH` service binding.
+Workers. Signed-in members land on their profile and can manage Passkeys and an
+authenticator app from Account Security. Either method enables MFA protection;
+Passkeys also protect later password sign-ins with an account-bound challenge.
+The sole
+superuser can also manage users, protected APIs, and OAuth Applications through
+the `AUTH` service binding, including read-only user profiles and successful
+account activity.
 
 ## Local development
 
@@ -17,12 +21,15 @@ bun run --cwd apps/auth-dashboard dev
 ```
 
 Open `http://localhost:4321/bootstrap` and use the printed token to create the
-sole superuser. The Astro adapter starts the auth Worker as a development-only
-auxiliary Worker and persists its D1 and KV state in
+sole superuser. The dashboard's `dev` command also applies pending local auth
+migrations before the Astro adapter starts the auth Worker as a
+development-only auxiliary Worker. D1 and KV state persist in
 `services/auth/.wrangler/state`.
 
 The auth service's `.dev.vars` must include `http://localhost:4321` in
-`AUTH_TRUSTED_ORIGINS`. In production, use the deployed dashboard origin.
+`AUTH_TRUSTED_ORIGINS`. Production uses the Custom Domain
+`https://dashboard.auth.otakuma.dev`, which shares the WebAuthn RP ID
+`auth.otakuma.dev` with `https://chikara.auth.otakuma.dev`.
 
 ## Styling
 
@@ -35,8 +42,10 @@ layers until their whole surface can be removed.
 
 ## Deployment
 
-The auth Worker must be deployed before the dashboard because the dashboard's
-`AUTH` binding targets the `auth` Worker:
+The deployment command applies pending remote D1 migrations, then deploys the
+private auth Worker, public gateway, and dashboard in dependency order. The
+gateway and dashboard Custom Domains are activated as part of their Wrangler
+deployments:
 
 ```sh
 bun run deploy:auth-dashboard

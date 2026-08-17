@@ -26,6 +26,26 @@ export function authenticationOptions(
   return isAuthenticationOptions(value) ? value : undefined;
 }
 
+export function secondFactorAuthenticationOptions(
+  value: unknown,
+): PublicKeyCredentialRequestOptionsJSON | undefined {
+  if (!isAuthenticationOptions(value)) return undefined;
+  const item = record(value);
+  if (
+    !Array.isArray(item?.allowCredentials) ||
+    item.allowCredentials.length === 0 ||
+    !item.allowCredentials.every((credential) => {
+      const descriptor = record(credential);
+      return (
+        typeof descriptor?.id === "string" && descriptor.type === "public-key"
+      );
+    })
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
 function isRegistrationOptions(
   value: unknown,
 ): value is PublicKeyCredentialCreationOptionsJSON {

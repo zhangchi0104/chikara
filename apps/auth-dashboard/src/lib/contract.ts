@@ -1,3 +1,4 @@
+import { authEventTypes } from "@chikara/auth/dashboard-contract";
 import type {
   AccountProfile,
   AccountSession,
@@ -5,6 +6,12 @@ import type {
   Application,
   OauthEndpoints,
   User,
+  UserActivity,
+  UserActivityCursor,
+  UserActivityPage,
+  UserActivityType,
+  UserDetail,
+  UserProfile,
 } from "./models.js";
 import { twoFactorState } from "./two-factor.js";
 
@@ -22,6 +29,12 @@ function string(value: unknown): string | undefined {
 
 function number(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
+}
+
+function nonNegativeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : undefined;
 }
 
 function boolean(value: unknown): boolean | undefined {
@@ -57,6 +70,7 @@ function accountProfile(value: unknown): AccountProfile | undefined {
   const id = string(item?.id);
   const image = nullableString(item?.image);
   const name = string(item?.name);
+  const passkeyCount = nonNegativeInteger(item?.passkeyCount);
   const state = twoFactorState(item?.twoFactorState);
   if (
     !createdAt ||
@@ -65,6 +79,7 @@ function accountProfile(value: unknown): AccountProfile | undefined {
     !id ||
     image === undefined ||
     !name ||
+    passkeyCount === undefined ||
     !state
   ) {
     return undefined;
@@ -76,6 +91,7 @@ function accountProfile(value: unknown): AccountProfile | undefined {
     id,
     image,
     name,
+    passkeyCount,
     twoFactorState: state,
   };
 }
@@ -106,6 +122,67 @@ function user(value: unknown): User | undefined {
     return undefined;
   }
   return { createdAt, email, emailVerified, id, name, sessionCount };
+}
+
+const authEventTypeSet = new Set<string>(authEventTypes);
+
+function userActivityType(value: unknown): UserActivityType | undefined {
+  return typeof value === "string" && authEventTypeSet.has(value)
+    ? (value as UserActivityType)
+    : undefined;
+}
+
+function userActivity(value: unknown): UserActivity | undefined {
+  const item = record(value);
+  const actorName = nullableString(item?.actorName);
+  const actorUserId = nullableString(item?.actorUserId);
+  const eventType = userActivityType(item?.eventType);
+  const id = string(item?.id);
+  const occurredAt = number(item?.occurredAt);
+  if (
+    actorName === undefined ||
+    actorUserId === undefined ||
+    !eventType ||
+    !id ||
+    occurredAt === undefined
+  ) {
+    return undefined;
+  }
+  return { actorName, actorUserId, eventType, id, occurredAt };
+}
+
+function userActivityCursor(value: unknown): UserActivityCursor | undefined {
+  const item = record(value);
+  const id = string(item?.id);
+  const occurredAt = number(item?.occurredAt);
+  return id && occurredAt !== undefined ? { id, occurredAt } : undefined;
+}
+
+function userActivityPage(value: unknown): UserActivityPage | undefined {
+  const item = record(value);
+  const events = array(item?.events, userActivity);
+  const nextCursor =
+    item?.nextCursor === null ? null : userActivityCursor(item?.nextCursor);
+  return events && nextCursor !== undefined
+    ? { events, nextCursor }
+    : undefined;
+}
+
+function userProfile(value: unknown): UserProfile | undefined {
+  const item = record(value);
+  const base = user(value);
+  const administrator = boolean(item?.administrator);
+  const image = nullableString(item?.image);
+  return base && administrator !== undefined && image !== undefined
+    ? { ...base, administrator, image }
+    : undefined;
+}
+
+export function userDetail(value: unknown): UserDetail | undefined {
+  const item = record(value);
+  const activity = userActivityPage(item?.activity);
+  const profile = userProfile(item?.user);
+  return activity && profile ? { activity, user: profile } : undefined;
 }
 
 function api(value: unknown): Api | undefined {

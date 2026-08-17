@@ -1,18 +1,24 @@
 ---
 import type { AccountSession } from "../lib/models.js";
+import {
+  accountRoutes,
+  type AccountPageId,
+} from "../lib/navigation.js";
 import Icon from "../components/Icon.astro";
-import ProfileMenu from "../components/ProfileMenu.astro";
+import ProfileMenu from "../components/ProfileMenu";
 import "../styles/global.css";
 
 interface Props {
   account: AccountSession;
+  active: AccountPageId;
   description: string;
   title: string;
 }
 
-const { account, description, title } = Astro.props;
+const { account, active, description, title } = Astro.props;
+const profileMenuUser = { email: account.user.email, name: account.user.name };
 const navLinkClasses =
-  "flex min-h-[42px] items-center gap-[11px] rounded-[9px] px-[11px] font-semibold text-[#bfc8d7] hover:bg-[#19253a] hover:text-white aria-[current=page]:bg-[#2a364b] aria-[current=page]:text-white aria-[current=page]:[&_svg]:text-[#ff8a5d]";
+  "flex min-h-[42px] items-center gap-[11px] rounded-[9px] px-[11px] font-semibold text-[#bfc8d7] hover:bg-[#19253a] hover:text-white aria-[current=page]:bg-[#2a364b] aria-[current=page]:text-white aria-[current=page]:[&_svg]:text-[#ff8a5d] mobile:min-h-11 mobile:px-3 profile-compact:w-11 profile-compact:justify-center profile-compact:px-0 profile-compact:[&>span:last-child]:hidden";
 const navLabelClasses =
   "mx-2.5 mb-2 text-[11px] font-bold tracking-[0.08em] text-[#8e9ab0] uppercase mobile:hidden";
 ---
@@ -27,18 +33,18 @@ const navLabelClasses =
   </head>
   <body class="min-w-80 mobile:pb-0">
     <Fragment set:html={`<!--
-THESIS: A signed-in person meets their identity as one clear record, refusing to turn a personal profile into another admin dashboard.
-OWN-WORLD: An ink-navy account rail anchors paper-white identity surfaces, precise account rows, and warm signal-orange actions.
-STORY: The member moves from their personal account context into identity facts and sign-in protection; an administrator can return to operations.
-FIRST VIEWPORT: A compact account sidebar anchors a focused identity workspace, with Profile selected and account controls held at the rail's foot.
-FORM: Identity ledger, selected directly for the specified account task; seed key precise-profile-extension.
+THESIS: A signed-in person can move between identity and sign-in protection without entering the administrator workbench.
+OWN-WORLD: An ink-navy account rail anchors paper-white identity and security surfaces with warm signal-orange actions.
+STORY: The member selects a personal account destination, completes the focused task, and can return to management only when authorized.
+FIRST VIEWPORT: A compact account sidebar anchors a focused workspace, with the current destination selected and account controls at the rail's foot.
+FORM: Personal account ledger and security controls, selected directly for the specified account task; seed key precise-profile-extension.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
 -->`} />
     <a
       class="fixed top-3 left-4 z-40 inline-flex min-h-10 -translate-y-[calc(100%+20px)] items-center rounded-[9px] bg-signal px-3.5 font-bold text-white focus-visible:translate-y-0"
-      href="#profile-main"
+      href="#account-main"
     >
-      Skip to profile content
+      Skip to account content
     </a>
     <div class="grid min-h-screen grid-cols-[240px_minmax(0,1fr)] mobile:block">
       <aside
@@ -47,7 +53,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <a
           class="inline-flex items-center gap-[11px] text-[18px] font-[720] tracking-[-0.02em] profile-compact:[&>span:last-child]:hidden"
           href="/profile"
-          aria-label="Otakuma Auth profile"
+          aria-label="Otakuma Auth account"
         >
           <span
             class="grid size-[30px] place-items-center rounded-[9px] bg-signal text-[11px] font-extrabold tracking-[0.04em] text-white"
@@ -60,18 +66,22 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           aria-label="Account"
         >
           <p class:list={[navLabelClasses, "mt-0"]}>Account</p>
-          <a class:list={[navLinkClasses, "mobile:hidden"]} href="/profile" aria-current="page">
-            <Icon name="user" />
-            <span>Profile</span>
-          </a>
+          {accountRoutes.map((item) => (
+            <a
+              href={item.href}
+              class={navLinkClasses}
+              aria-current={active === item.id ? "page" : undefined}
+              aria-label={item.label}
+            >
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </a>
+          ))}
           {account.canManage && (
             <>
               <p class:list={[navLabelClasses, "mt-[26px]"]}>Management</p>
               <a
-                class:list={[
-                  navLinkClasses,
-                  "mobile:min-h-11 mobile:px-3 profile-compact:w-11 profile-compact:justify-center profile-compact:px-0 profile-compact:[&>span:last-child]:hidden",
-                ]}
+                class={navLinkClasses}
                 href="/apis"
                 aria-label="Back to dashboard"
               >
@@ -83,19 +93,19 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         </nav>
         <div class="mt-auto flex w-full shrink-0 items-center gap-2 border-t border-[#2b374c] pt-[18px] mobile:m-0 mobile:w-auto mobile:border-0 mobile:p-0">
           <ProfileMenu
+            client:load
             compactOnMobile
-            current
-            id="profile-page-account-menu"
+            current={active === "profile"}
+            id="account-page-menu"
             label={account.canManage ? "Administrator" : "Member"}
-            mobilePlacement="bottom-right"
             tone="dark"
-            user={account.user}
+            user={profileMenuUser}
           />
         </div>
       </aside>
       <main
         class="min-w-0 px-[clamp(24px,4vw,64px)] pt-10 pb-16 mobile:px-6 mobile:pt-[34px] mobile:pb-14 profile-compact:px-4 profile-compact:pt-8 profile-compact:pb-12"
-        id="profile-main"
+        id="account-main"
       >
         <div class="mx-auto w-full max-w-[960px]">
           <header class="mb-7">
@@ -106,6 +116,5 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         </div>
       </main>
     </div>
-    <script src="../scripts/profile-menu.ts"></script>
   </body>
 </html>

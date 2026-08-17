@@ -1,10 +1,12 @@
 import { env } from "cloudflare:workers";
+import { type TwoFactorMethod, twoFactorMethods } from "./action-outcome.js";
 import {
   accountSession,
   apis,
   applications,
   bootstrapStatus,
   oauthEndpoints,
+  userDetail,
   users,
 } from "./contract.js";
 import type {
@@ -13,6 +15,7 @@ import type {
   Application,
   OauthEndpoints,
   User,
+  UserDetail,
 } from "./models.js";
 
 export async function forwardToAuth(
@@ -49,8 +52,28 @@ export const getBootstrapStatus = (request: Request) =>
 export const getAccountSession = (request: Request) =>
   managementGet<AccountSession>(request, "/session", accountSession);
 
+export async function getTwoFactorChallenge(request: Request): Promise<{
+  readonly data?: ReadonlyArray<TwoFactorMethod>;
+  readonly status: number;
+}> {
+  const response = await forwardToAuth(request, "/api/auth/two-factor/methods");
+  if (!response.ok) return { status: response.status };
+  const payload: unknown = await response.json().catch(() => undefined);
+  const methods = twoFactorMethods(payload);
+  return methods.length > 0
+    ? { data: methods, status: response.status }
+    : { status: 502 };
+}
+
 export const getUsers = (request: Request) =>
   managementGet<ReadonlyArray<User>>(request, "/users", users);
+
+export const getUserDetail = (request: Request, userId: string) =>
+  managementGet<UserDetail>(
+    request,
+    `/users/${encodeURIComponent(userId)}`,
+    userDetail,
+  );
 
 export const getApis = (request: Request) =>
   managementGet<ReadonlyArray<Api>>(request, "/apis", apis);

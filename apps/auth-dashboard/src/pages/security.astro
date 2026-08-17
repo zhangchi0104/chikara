@@ -1,52 +1,114 @@
 ---
 import Dialog from "../components/Dialog.astro";
 import TwoFactorPanel from "../components/TwoFactorPanel.astro";
-import DashboardLayout from "../layouts/DashboardLayout.astro";
+import AccountLayout from "../layouts/AccountLayout.astro";
+import { accountProtection } from "../lib/account-protection.js";
 
 const account = Astro.locals.account;
+const protection = accountProtection(
+  account.user.passkeyCount,
+  account.user.twoFactorState,
+);
 ---
 
-<DashboardLayout active="security" title="Security" description="Protect the operator account with passkeys, an authenticator app, and recovery codes." user={account.user}>
-  <section class="security-grid" data-security-page>
+<AccountLayout
+  account={account}
+  active="security"
+  title="Security"
+  description="Protect your account with an authenticator app, recovery codes, and passkeys."
+>
+  <div
+    class="security-page"
+    data-security-page
+    data-authenticator-state={account.user.twoFactorState}
+    data-passkey-count={account.user.passkeyCount}
+  >
     <article class="data-surface security-card">
       <header class="security-card-head">
         <div>
-          <p class="security-eyebrow">WebAuthn</p>
-          <h2>Passkeys</h2>
-          <p>Sign in with a device or security key without typing a password.</p>
+          <h2>Multi-factor authentication</h2>
+          <p>Passkeys and authenticator codes are both accepted verification methods.</p>
         </div>
-        <span class="badge neutral" data-passkey-support>Checking</span>
+        <span
+          class:list={["badge", { warning: protection.tone === "warning" }]}
+          data-mfa-badge
+        >{protection.badge}</span>
       </header>
       <div class="security-card-body">
-        <p class="security-status" data-passkey-status data-state="pending" aria-live="polite">Loading your passkeys…</p>
-        <ul class="security-list" data-passkey-list hidden></ul>
-        <p class="security-empty" data-passkey-empty hidden>No passkeys are registered for this account yet.</p>
-        <div class="button-row">
-          <button class="button button-primary" type="button" data-open-dialog="register-passkey" data-passkey-register-trigger>Add a passkey</button>
-        </div>
-        <p class="security-note">Passkeys are stored by your device or password manager. Rename or revoke them here at any time.</p>
+        <p
+          class="security-status"
+          data-mfa-status
+          data-state={protection.tone}
+          role="status"
+          aria-live="polite"
+        >{protection.message}</p>
       </div>
     </article>
 
-    <TwoFactorPanel state={account.user.twoFactorState} idPrefix="security-two-factor" />
-  </section>
+    <section class="security-grid">
+      <TwoFactorPanel state={account.user.twoFactorState} idPrefix="security-two-factor" />
 
-  <Dialog id="register-passkey" title="Add a passkey" description="Choose a name so you can recognize this passkey later.">
-    <form data-passkey-register-form>
-      <label class="field"><span>Passkey name</span><input name="name" maxlength="100" autocomplete="off" placeholder="MacBook Pro or security key" /><small>This label stays in your account and can be changed later.</small></label>
-      <p class="warning-box" data-passkey-register-error role="alert" hidden></p>
-      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Continue</button></div>
-    </form>
-  </Dialog>
+      <article class="data-surface security-card">
+        <header class="security-card-head">
+          <div>
+            <h2>Passkeys</h2>
+            <p>Sign in with a device or security key without typing a password.</p>
+          </div>
+          <span class="badge neutral" data-passkey-support>Checking</span>
+        </header>
+        <div class="security-card-body">
+          <p class="security-status" data-passkey-status data-state="pending" aria-live="polite">
+            Loading your passkeys…
+          </p>
+          <ul class="security-list" data-passkey-list hidden></ul>
+          <p class="security-empty" data-passkey-empty hidden>
+            No passkeys are registered for this account yet.
+          </p>
+          <div class="button-row">
+            <button
+              class="button button-primary"
+              type="button"
+              data-open-dialog="register-passkey"
+              data-passkey-register-trigger
+            >Add a passkey</button>
+          </div>
+          <p class="security-note">
+            Passkeys are stored by your device or password manager. Rename or revoke them here at any time.
+          </p>
+        </div>
+      </article>
+    </section>
 
-  <Dialog id="rename-passkey" title="Rename passkey" description="Use a name that helps identify this device or key.">
-    <form data-passkey-rename-form>
-      <input type="hidden" name="id" />
-      <label class="field"><span>Passkey name</span><input name="name" maxlength="100" required /></label>
-      <p class="warning-box" data-passkey-rename-error role="alert" hidden></p>
-      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Save name</button></div>
-    </form>
-  </Dialog>
+    <Dialog id="register-passkey" title="Add a passkey" description="Choose a name so you can recognize this passkey later.">
+      <form data-passkey-register-form>
+        <label class="field">
+          <span>Passkey name</span>
+          <input name="name" maxlength="100" autocomplete="off" placeholder="MacBook Pro or security key" />
+          <small>This label stays in your account and can be changed later.</small>
+        </label>
+        <p class="warning-box" data-passkey-register-error role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="button" type="button" data-close-dialog>Cancel</button>
+          <button class="button button-primary" type="submit">Continue</button>
+        </div>
+      </form>
+    </Dialog>
 
-  <script src="../scripts/security.ts"></script>
-</DashboardLayout>
+    <Dialog id="rename-passkey" title="Rename passkey" description="Use a name that helps identify this device or key.">
+      <form data-passkey-rename-form>
+        <input type="hidden" name="id" />
+        <label class="field">
+          <span>Passkey name</span>
+          <input name="name" maxlength="100" required />
+        </label>
+        <p class="warning-box" data-passkey-rename-error role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="button" type="button" data-close-dialog>Cancel</button>
+          <button class="button button-primary" type="submit">Save name</button>
+        </div>
+      </form>
+    </Dialog>
+
+    <script src="../scripts/security.ts"></script>
+  </div>
+</AccountLayout>

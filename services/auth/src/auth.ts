@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { pipe } from "effect";
+import { createAuthAuditPlugin } from "./auth-audit/auth-audit.plugin.js";
 import { type AuthBindings, readAuthConfig } from "./configs/auth.config.js";
 import { createAuthOptions } from "./constants/better-auth.constant.js";
 import {
@@ -16,14 +17,16 @@ export async function createAuth(
   options: CreateAuthOptions = {},
 ) {
   const validAudiences = await listAudienceIdentifiers(bindings.AUTH_DB);
+  const configured = createAuthOptions(pipe(bindings, readAuthConfig), {
+    isSuperuser: (userId) => isSuperuserId(bindings.AUTH_DB, userId),
+    validAudiences,
+    ...(options.clientReference
+      ? { clientReference: options.clientReference }
+      : {}),
+  });
   return betterAuth({
-    ...createAuthOptions(pipe(bindings, readAuthConfig), {
-      isSuperuser: (userId) => isSuperuserId(bindings.AUTH_DB, userId),
-      validAudiences,
-      ...(options.clientReference
-        ? { clientReference: options.clientReference }
-        : {}),
-    }),
+    ...configured,
     database: bindings.AUTH_DB,
+    plugins: [...configured.plugins, createAuthAuditPlugin(bindings.AUTH_DB)],
   });
 }

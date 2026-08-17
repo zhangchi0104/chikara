@@ -1,29 +1,8 @@
 import {
-  browserSupportsWebAuthn,
-  startAuthentication,
-} from "@simplewebauthn/browser";
-import {
-  authenticationOptions,
-  authenticationResponseBody,
-  passkeyError,
-} from "../lib/passkey.js";
-import { requestJSON } from "./browser.js";
-
-const passkeyRequest = (endpoint: string, body?: object) =>
-  requestJSON(endpoint, {
-    ...(body ? { body } : {}),
-    failureMessage: (value) =>
-      passkeyError(value, "Passkey sign-in could not be completed."),
-  });
-
-function ceremonyMessage(error: unknown): string {
-  if (error instanceof DOMException && error.name === "NotAllowedError") {
-    return "Passkey sign-in was cancelled or timed out.";
-  }
-  return error instanceof Error && error.message
-    ? error.message
-    : "Passkey sign-in could not be completed.";
-}
+  passkeyCeremonyMessage,
+  signInWithPasskey,
+  supportsPasskeyAuthentication,
+} from "./passkey-authentication.js";
 
 const button = document.querySelector<HTMLButtonElement>(
   "[data-passkey-sign-in]",
@@ -36,7 +15,7 @@ if (button) {
     throw new Error("Passkey sign-in is missing its error output.");
   }
 
-  if (!browserSupportsWebAuthn()) {
+  if (!supportsPasskeyAuthentication()) {
     button.disabled = true;
     button.title = "This browser does not support passkeys.";
     errorOutput.textContent =
@@ -51,25 +30,10 @@ if (button) {
         button.disabled = true;
         button.textContent = "Waiting for your passkey…";
         try {
-          const options = authenticationOptions(
-            await passkeyRequest(
-              "/api/auth/passkey/generate-authenticate-options",
-            ),
-          );
-          if (!options) {
-            throw new Error(
-              "The passkey challenge was incomplete. Start again.",
-            );
-          }
-          const credential = await startAuthentication({
-            optionsJSON: options,
-          });
-          await passkeyRequest("/api/auth/passkey/verify-authentication", {
-            response: authenticationResponseBody(credential),
-          });
+          await signInWithPasskey();
           window.location.assign("/");
         } catch (error) {
-          errorOutput.textContent = ceremonyMessage(error);
+          errorOutput.textContent = passkeyCeremonyMessage(error);
           errorOutput.hidden = false;
           button.disabled = false;
           button.textContent = originalLabel;

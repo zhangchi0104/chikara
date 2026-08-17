@@ -31,10 +31,83 @@ async function request(path, body) {
   return payload;
 }
 
-function twoFactorURL() {
+async function get(path) {
+  const response = await fetch(path, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.message || "Request failed");
+  return payload;
+}
+
+function twoFactorURL(payload) {
   const url = new URL("/two-factor", window.location.origin);
   if (oauthQuery) url.search = oauthQuery;
+  if (payload && Array.isArray(payload.twoFactorMethods)) {
+    for (const method of payload.twoFactorMethods) {
+      if (method === "passkey" || method === "totp") {
+        url.searchParams.append("method", method);
+      }
+    }
+  }
   return url.toString();
+}
+
+function decodeBase64url(value) {
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
+  const decoded = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+  return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+}
+
+function encodeBase64url(value) {
+  let binary = "";
+  for (const byte of new Uint8Array(value)) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function authenticationOptions(payload) {
+  if (!payload || typeof payload.challenge !== "string") {
+    throw new Error("The passkey challenge was incomplete. Start again.");
+  }
+  return {
+    ...payload,
+    challenge: decodeBase64url(payload.challenge),
+    ...(Array.isArray(payload.allowCredentials)
+      ? { allowCredentials: payload.allowCredentials.map((credential) => ({
+          ...credential,
+          id: decodeBase64url(credential.id),
+        })) }
+      : {}),
+  };
+}
+
+async function authenticateWithPasskey() {
+  if (!window.PublicKeyCredential || !navigator.credentials) {
+    throw new Error("Passkeys are unavailable in this browser.");
+  }
+  const options = authenticationOptions(
+    await get("/api/auth/passkey/generate-authenticate-options"),
+  );
+  const credential = await navigator.credentials.get({ publicKey: options });
+  if (!credential || !(credential.response instanceof AuthenticatorAssertionResponse)) {
+    throw new Error("Passkey verification was cancelled or timed out.");
+  }
+  const response = credential.response;
+  return request("/api/auth/passkey/verify-authentication", {
+    response: {
+      authenticatorAttachment: credential.authenticatorAttachment,
+      id: credential.id,
+      rawId: encodeBase64url(credential.rawId),
+      response: {
+        authenticatorData: encodeBase64url(response.authenticatorData),
+        clientDataJSON: encodeBase64url(response.clientDataJSON),
+        signature: encodeBase64url(response.signature),
+        userHandle: response.userHandle ? encodeBase64url(response.userHandle) : null,
+      },
+      type: credential.type,
+    },
+  });
 }
 
 function finishAuthentication(payload) {
@@ -88,7 +161,9 @@ export function signInPage(): string {
       <label>Email <input name="email" type="email" autocomplete="email" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
       <button type="submit">Sign in</button>
-      <p data-error hidden></p>
+      <p class="muted">or</p>
+      <button type="button" data-passkey-sign-in aria-describedby="passkey-error">Use a passkey</button>
+      <p id="passkey-error" data-error role="alert" hidden></p>
     </form>
     <p class="muted">Need an account? <a data-sign-up href="/sign-up">Create one</a></p>`,
     `
@@ -103,20 +178,53 @@ document.querySelector("[data-form]").addEventListener("submit", async (event) =
       rememberMe: true,
     });
     if (payload && payload.twoFactorRedirect === true) {
-      window.location.assign(twoFactorURL());
+      window.location.assign(twoFactorURL(payload));
       return;
     }
     finishAuthentication(payload);
   } catch (error) { showError(error); }
-});`,
+});
+const passkeyButton = document.querySelector("[data-passkey-sign-in]");
+const passkeyError = document.querySelector("[data-error]");
+if (!window.PublicKeyCredential || !navigator.credentials) {
+  passkeyButton.disabled = true;
+  passkeyError.textContent = "Passkey sign-in is unavailable in this browser. Sign in with your password instead.";
+  passkeyError.hidden = false;
+} else {
+  passkeyButton.addEventListener("click", async () => {
+    const label = passkeyButton.textContent;
+    passkeyButton.disabled = true;
+    passkeyButton.setAttribute("aria-busy", "true");
+    passkeyButton.textContent = "Waiting for your passkey…";
+    try {
+      finishAuthentication(await authenticateWithPasskey());
+    } catch (error) {
+      showError(error);
+      passkeyButton.disabled = false;
+      passkeyButton.removeAttribute("aria-busy");
+      passkeyButton.textContent = label;
+    }
+  });
+}`,
   );
 }
 
-export function twoFactorPage(): string {
-  return page(
-    "Verify your sign-in",
-    `<h1>Verify your sign-in</h1>
-    <p class="muted">Enter the six-digit code from your authenticator app.</p>
+export function twoFactorPage(methods: ReadonlyArray<string> = []): string {
+  const filtered = methods.filter(
+    (method) => method === "passkey" || method === "totp",
+  );
+  const passkey = filtered.includes("passkey");
+  const totp = filtered.includes("totp");
+  const passkeyMarkup = passkey
+    ? `<p class="muted">Verify with a passkey registered to this account.</p>
+    <button type="button" data-passkey-verification data-unavailable="${
+      totp
+        ? "Passkey verification is unavailable in this browser. Use another enrolled method."
+        : "Passkey verification is unavailable in this browser. Restart sign-in on a device with passkey support."
+    }" aria-describedby="verification-error">Use a passkey</button>`
+    : "";
+  const totpMarkup = totp
+    ? `<p class="muted">Enter the six-digit code from your authenticator app.</p>
     <form method="post" data-two-factor-form data-endpoint="/api/auth/two-factor/verify-totp">
       <input name="factor" type="hidden" value="totp">
       <label>Authenticator code <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus></label>
@@ -127,9 +235,37 @@ export function twoFactorPage(): string {
       <input name="factor" type="hidden" value="recovery">
       <label>Recovery code <input name="code" autocomplete="off" spellcheck="false" required></label>
       <button type="submit">Use recovery code</button>
-    </form>
-    <p data-error hidden></p>`,
+    </form>`
+    : "";
+  return page(
+    "Verify your sign-in",
+    `<h1>Verify your sign-in</h1>
+    ${passkeyMarkup}
+    ${totpMarkup}
+    <p id="verification-error" data-error role="alert" hidden></p>`,
     `
+const verificationButton = document.querySelector("[data-passkey-verification]");
+if (verificationButton) {
+  if (!window.PublicKeyCredential || !navigator.credentials) {
+    verificationButton.disabled = true;
+    showError(new Error(verificationButton.dataset.unavailable || "Passkey verification is unavailable in this browser."));
+  } else {
+    verificationButton.addEventListener("click", async () => {
+      const label = verificationButton.textContent;
+      verificationButton.disabled = true;
+      verificationButton.setAttribute("aria-busy", "true");
+      verificationButton.textContent = "Waiting for your passkey…";
+      try {
+        finishAuthentication(await authenticateWithPasskey());
+      } catch (error) {
+        showError(error);
+        verificationButton.disabled = false;
+        verificationButton.removeAttribute("aria-busy");
+        verificationButton.textContent = label;
+      }
+    });
+  }
+}
 for (const form of document.querySelectorAll("[data-two-factor-form]")) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

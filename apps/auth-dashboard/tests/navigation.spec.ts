@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountRoutes,
   authenticatedLanding,
   canAccessPage,
   isProtectedPage,
@@ -16,10 +17,17 @@ describe("dashboard account navigation", () => {
     expect(authenticatedLanding(member)).toBe("/profile");
   });
 
-  it("keeps the profile available while restricting management pages", () => {
-    for (const path of ["/profile", "/profile/"]) {
-      expect(isProtectedPage(path)).toBe(true);
-      expect(canAccessPage(path, member)).toBe(true);
+  it("keeps account pages available while restricting management pages", () => {
+    expect(accountRoutes.map(({ href }) => href)).toEqual([
+      "/profile",
+      "/security",
+    ]);
+    for (const { href: path } of accountRoutes) {
+      for (const variant of [path, `${path}/`]) {
+        expect(isProtectedPage(variant)).toBe(true);
+        expect(canAccessPage(variant, member)).toBe(true);
+        expect(canAccessPage(variant, administrator)).toBe(true);
+      }
     }
     expect(managementRoutes.map(({ href }) => href)).toEqual([
       "/apis",
@@ -33,11 +41,14 @@ describe("dashboard account navigation", () => {
         expect(canAccessPage(variant, administrator)).toBe(true);
       }
     }
-    for (const path of ["/security", "/security/"]) {
+
+    for (const path of ["/users/user-1", "/users/user-1/"]) {
       expect(isProtectedPage(path)).toBe(true);
       expect(canAccessPage(path, member)).toBe(false);
       expect(canAccessPage(path, administrator)).toBe(true);
     }
+    expect(isProtectedPage("/users-archive")).toBe(false);
+    expect(canAccessPage("/users-archive", member)).toBe(true);
   });
 
   it("accepts only same-origin return paths", () => {

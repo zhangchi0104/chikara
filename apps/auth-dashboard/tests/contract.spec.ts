@@ -4,6 +4,7 @@ import {
   applications,
   bootstrapStatus,
   oauthEndpoints,
+  userDetail,
 } from "../src/lib/contract.js";
 
 describe("dashboard transport contract", () => {
@@ -18,6 +19,7 @@ describe("dashboard transport contract", () => {
           id: "user-1",
           image: null,
           name: "Member",
+          passkeyCount: 1,
           twoFactorState: "disabled",
         },
       }),
@@ -30,6 +32,7 @@ describe("dashboard transport contract", () => {
         id: "user-1",
         image: null,
         name: "Member",
+        passkeyCount: 1,
         twoFactorState: "disabled",
       },
     });
@@ -40,6 +43,21 @@ describe("dashboard transport contract", () => {
           email: "member@example.com",
           id: "user-1",
           name: "Member",
+        },
+      }),
+    ).toBeUndefined();
+    expect(
+      accountSession({
+        canManage: false,
+        user: {
+          createdAt: "2026-08-16T00:00:00.000Z",
+          email: "member@example.com",
+          emailVerified: true,
+          id: "user-1",
+          image: null,
+          name: "Member",
+          passkeyCount: -1,
+          twoFactorState: "disabled",
         },
       }),
     ).toBeUndefined();
@@ -93,6 +111,57 @@ describe("dashboard transport contract", () => {
     });
     expect(
       oauthEndpoints({ authorization_endpoint: "https://auth.example.com" }),
+    ).toBeUndefined();
+  });
+
+  it("accepts a bounded administrator view of user activity", () => {
+    expect(
+      userDetail({
+        activity: {
+          events: [
+            {
+              actorName: "Admin",
+              actorUserId: "admin-1",
+              eventType: "account.provisioned",
+              id: "event-1",
+              occurredAt: 1,
+            },
+          ],
+          nextCursor: { id: "event-1", occurredAt: 1 },
+        },
+        user: {
+          administrator: false,
+          createdAt: 1,
+          email: "member@example.com",
+          emailVerified: true,
+          id: "user-1",
+          image: null,
+          name: "Member",
+          sessionCount: 2,
+        },
+      }),
+    ).toMatchObject({
+      activity: {
+        events: [{ eventType: "account.provisioned" }],
+      },
+      user: { email: "member@example.com" },
+    });
+    expect(
+      userDetail({
+        activity: {
+          events: [
+            {
+              actorName: null,
+              actorUserId: null,
+              eventType: "password.exposed",
+              id: "event-1",
+              occurredAt: 1,
+            },
+          ],
+          nextCursor: null,
+        },
+        user: {},
+      }),
     ).toBeUndefined();
   });
 });

@@ -189,6 +189,7 @@ describe("auth dashboard integration", () => {
         emailVerified: true,
         image: null,
         name: "Admin",
+        passkeyCount: 0,
         twoFactorState: "disabled",
       },
     });
@@ -236,6 +237,7 @@ describe("auth dashboard integration", () => {
       user: {
         email: "member@example.com",
         name: "Member",
+        passkeyCount: 0,
         twoFactorState: "disabled",
       },
     });

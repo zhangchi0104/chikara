@@ -36,6 +36,7 @@ const users: ReadonlyArray<User> = result.data ?? [];
                   <td data-label="Created">{formatDate(user.createdAt)}</td>
                   <td>
                     <div class="row-actions">
+                      <a class="button button-small" href={`/users/${encodeURIComponent(user.id)}`}>View profile</a>
                       <button class="button button-small" type="button" data-open-dialog="edit-user" data-edit-user data-user-id={user.id} data-user-name={user.name} data-user-email={user.email}>Edit</button>
                       {user.id !== superuser.id && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/users/${user.id}/revoke-sessions`} data-confirm={`Revoke every active session for ${user.name}?`}>Revoke sessions</button>}
                       {user.id !== superuser.id && <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/users/${user.id}`} data-method="DELETE" data-confirm={`Permanently delete ${user.name}? This cannot be undone.`}>Delete</button>}

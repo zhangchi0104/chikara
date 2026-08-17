@@ -3,6 +3,13 @@
   "name": "gateway",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-10",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "chikara.auth.otakuma.dev",
+      "custom_domain": true
+    }
+  ],
   "services": [
     {
       "binding": "AUTH",

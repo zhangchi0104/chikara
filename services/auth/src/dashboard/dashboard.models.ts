@@ -1,5 +1,13 @@
+import type { AuthEventPage } from "../auth-audit/auth-audit.models.js";
 import type { TwoFactorState } from "../two-factor.state.js";
 
+export type {
+  AuthEvent,
+  AuthEventCursor,
+  AuthEventPage,
+  AuthEventType,
+} from "../auth-audit/auth-audit.models.js";
+export { authEventTypes } from "../auth-audit/auth-audit.models.js";
 export type { TwoFactorState } from "../two-factor.state.js";
 
 export interface DashboardUser {
@@ -11,6 +19,16 @@ export interface DashboardUser {
   readonly sessionCount: number;
 }
 
+export interface DashboardUserProfile extends DashboardUser {
+  readonly administrator: boolean;
+  readonly image: string | null;
+}
+
+export interface DashboardUserDetail {
+  readonly activity: AuthEventPage;
+  readonly user: DashboardUserProfile;
+}
+
 export interface AccountProfile {
   readonly createdAt: string;
   readonly email: string;
@@ -18,6 +36,7 @@ export interface AccountProfile {
   readonly id: string;
   readonly image: string | null;
   readonly name: string;
+  readonly passkeyCount: number;
   readonly twoFactorState: TwoFactorState;
 }
 

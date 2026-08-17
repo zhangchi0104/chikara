@@ -8,6 +8,9 @@ const migrationPaths = [
   "0004_auth_security.sql",
   "0005_two_factor_mutation_guard.sql",
   "0006_drop_redundant_two_factor_index.sql",
+  "0007_auth_audit.sql",
+  "0008_unique_passkey_credential.sql",
+  "0009_normalize_two_factor_verification.sql",
 ];
 
 function migrationStatements(sql: string): ReadonlyArray<string> {

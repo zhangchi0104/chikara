@@ -7,6 +7,10 @@ interface IndexRow {
   readonly unique: number;
 }
 
+interface TableRow {
+  readonly name: string;
+}
+
 describe("auth migrations", () => {
   let miniflare: Miniflare | undefined;
 
@@ -40,6 +44,18 @@ describe("auth migrations", () => {
     expect(indexes.results.map(({ name }) => name)).not.toContain(
       "twoFactor_userId_idx",
     );
+    const passkeyIndexes = await bindings.AUTH_DB.prepare(
+      'PRAGMA index_list("passkey")',
+    ).all<IndexRow>();
+    expect(passkeyIndexes.results).toContainEqual(
+      expect.objectContaining({
+        name: "passkey_credentialID_unique_idx",
+        unique: 1,
+      }),
+    );
+    expect(passkeyIndexes.results.map(({ name }) => name)).not.toContain(
+      "passkey_credentialID_idx",
+    );
 
     await bindings.AUTH_DB.batch([
       bindings.AUTH_DB.prepare(
@@ -54,5 +70,34 @@ describe("auth migrations", () => {
         .bind("protected-user")
         .run(),
     ).rejects.toThrow(/TWO_FACTOR_ALREADY_ENABLED/);
+  });
+
+  it("creates the bounded account-activity timeline index", async () => {
+    miniflare = new Miniflare(
+      convertV4MiniflareOptions({
+        compatibilityDate: "2026-08-08",
+        d1Databases: ["AUTH_DB"],
+        modules: true,
+        script: "export default { fetch() { return new Response('ok') } }",
+      }),
+    );
+    const bindings = await miniflare.getBindings<{
+      readonly AUTH_DB: D1Database;
+    }>();
+    await applyAuthMigrations(bindings.AUTH_DB);
+
+    expect(
+      await bindings.AUTH_DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'authAuditEvent'",
+      ).first<TableRow>(),
+    ).toEqual({ name: "authAuditEvent" });
+    const indexes = await bindings.AUTH_DB.prepare(
+      'PRAGMA index_list("authAuditEvent")',
+    ).all<IndexRow>();
+    expect(indexes.results).toContainEqual(
+      expect.objectContaining({
+        name: "authAuditEvent_subject_timeline_idx",
+      }),
+    );
   });
 });

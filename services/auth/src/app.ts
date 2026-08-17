@@ -7,6 +7,7 @@ import { validateTokenAudience } from "./dashboard/dashboard.access.js";
 import { createDashboardApp } from "./dashboard/dashboard.routes.js";
 import { consentPage, signInPage, signUpPage, twoFactorPage } from "./pages.js";
 import {
+  challengeMethods,
   handleSignInPageAction,
   handleTwoFactorPageAction,
   redirectWithCookies,
@@ -90,7 +91,27 @@ export function createApp(
     }),
   );
   app.get("/sign-up", (context) => context.html(signUpPage()));
-  app.get("/two-factor", (context) => context.html(twoFactorPage()));
+  app.get("/two-factor", async (context) => {
+    const methodsUrl = new URL(
+      `${AUTH_BASE_PATH}/two-factor/methods`,
+      context.req.url,
+    );
+    const response = await handleAuth(
+      new Request(methodsUrl, { headers: context.req.raw.headers }),
+      context.env,
+    );
+    const payload: unknown = await response
+      .clone()
+      .json()
+      .catch(() => undefined);
+    const methods = challengeMethods(payload);
+    if (!response.ok || methods.length === 0) {
+      const signIn = new URL("/sign-in", context.req.url);
+      signIn.search = new URL(context.req.url).search;
+      return context.redirect(signIn.toString(), 303);
+    }
+    return context.html(twoFactorPage(methods));
+  });
   app.post("/two-factor", (context) =>
     handleTwoFactorPageAction({
       forward: (request) => handleAuth(request, context.env),

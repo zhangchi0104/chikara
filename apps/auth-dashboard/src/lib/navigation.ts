@@ -2,6 +2,11 @@ import type { AccountSession } from "./models.js";
 
 export const MANAGEMENT_LANDING = "/apis";
 
+export const accountRoutes = [
+  { href: "/profile", icon: "user", id: "profile", label: "Profile" },
+  { href: "/security", icon: "key", id: "security", label: "Security" },
+] as const;
+
 export const managementRoutes = [
   { href: MANAGEMENT_LANDING, icon: "api", id: "apis", label: "APIs" },
   {
@@ -13,17 +18,19 @@ export const managementRoutes = [
   { href: "/users", icon: "user", id: "users", label: "Users" },
 ] as const;
 
-export type ManagementPageId =
-  | (typeof managementRoutes)[number]["id"]
-  | "security";
+export type AccountPageId = (typeof accountRoutes)[number]["id"];
+export type ManagementPageId = (typeof managementRoutes)[number]["id"];
 
-const managementPages = new Set<string>([
-  ...managementRoutes.map((route) => route.href),
-  "/security",
-]);
+const accountPages = new Set<string>(accountRoutes.map((route) => route.href));
 
 function canonicalPathname(pathname: string): string {
   return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+function isManagementPage(pathname: string): boolean {
+  return managementRoutes.some(
+    ({ href }) => pathname === href || pathname.startsWith(`${href}/`),
+  );
 }
 
 export function authenticatedLanding(
@@ -34,14 +41,14 @@ export function authenticatedLanding(
 
 export function isProtectedPage(pathname: string): boolean {
   const canonical = canonicalPathname(pathname);
-  return canonical === "/profile" || managementPages.has(canonical);
+  return accountPages.has(canonical) || isManagementPage(canonical);
 }
 
 export function canAccessPage(
   pathname: string,
   account: Pick<AccountSession, "canManage">,
 ): boolean {
-  return !managementPages.has(canonicalPathname(pathname)) || account.canManage;
+  return !isManagementPage(canonicalPathname(pathname)) || account.canManage;
 }
 
 export function safeLocalPath(value: unknown, fallback: string): string {

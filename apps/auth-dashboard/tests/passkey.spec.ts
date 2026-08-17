@@ -5,6 +5,7 @@ import {
   passkeyError,
   passkeyList,
   registrationOptions,
+  secondFactorAuthenticationOptions,
 } from "../src/lib/passkey.js";
 
 describe("passkey browser contract", () => {
@@ -21,6 +22,21 @@ describe("passkey browser contract", () => {
       }),
     ).toMatchObject({ challenge: "register-challenge" });
     expect(authenticationOptions({})).toBeUndefined();
+    expect(
+      secondFactorAuthenticationOptions({
+        allowCredentials: [{ id: "credential-1", type: "public-key" }],
+        challenge: "step-up-challenge",
+      }),
+    ).toMatchObject({ challenge: "step-up-challenge" });
+    expect(
+      secondFactorAuthenticationOptions({
+        allowCredentials: [],
+        challenge: "unbound-challenge",
+      }),
+    ).toBeUndefined();
+    expect(
+      secondFactorAuthenticationOptions({ challenge: "discoverable" }),
+    ).toBeUndefined();
     expect(registrationOptions({ challenge: "incomplete" })).toBeUndefined();
   });
 

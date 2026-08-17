@@ -12,7 +12,7 @@
     "check-types": "turbo run check",
     "test": "turbo run test",
     "db:create": "bun run --cwd services/auth db:create:remote",
-    "deploy:auth-dashboard": "bun run --cwd services/auth deploy && bun run --cwd apps/auth-dashboard deploy",
+    "deploy:auth-dashboard": "bun run --cwd services/auth db:migrate:remote && bun run --cwd services/auth deploy && bun run --cwd services/gateway deploy && bun run --cwd apps/auth-dashboard deploy",
     "migrate": "bun run --cwd services/auth db:migrate:local",
     "prepare": "effect-tsgo patch",
     "test:e2e": "maestro test apps/Chikara/.maestro",

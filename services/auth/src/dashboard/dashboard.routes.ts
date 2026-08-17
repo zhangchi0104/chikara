@@ -32,11 +32,30 @@ import {
 } from "./dashboard.input.js";
 import {
   createUser,
+  getUserDetail,
   listUsers,
   removeUser,
   revokeUserSessions,
   updateUser,
 } from "./dashboard.user-store.js";
+
+function activityCursor(request: Request) {
+  const url = new URL(request.url);
+  const occurredAtValue = url.searchParams.get("before");
+  const id = url.searchParams.get("beforeId");
+  if (occurredAtValue === null && id === null) return undefined;
+  const occurredAt = Number(occurredAtValue);
+  if (
+    occurredAtValue === null ||
+    id === null ||
+    !id ||
+    !Number.isSafeInteger(occurredAt) ||
+    occurredAt < 0
+  ) {
+    throw new DashboardError(400, "The activity cursor is invalid.");
+  }
+  return { id, occurredAt };
+}
 
 function promiseEffect<A>(task: () => Promise<A>) {
   return Effect.tryPromise({
@@ -105,6 +124,18 @@ export function createDashboardApp(): Hono<{ Bindings: AuthBindings }> {
     Effect.runPromise(listUsers(context.env.AUTH_DB)).then((users) =>
       context.json({ users }),
     ),
+  );
+  app.get("/users/:id", (context) =>
+    Effect.runPromise(
+      getUserDetail(
+        context.env.AUTH_DB,
+        context.req.param("id"),
+        activityCursor(context.req.raw),
+      ),
+    ).then((detail) => {
+      context.header("cache-control", "no-store");
+      return context.json(detail);
+    }),
   );
   app.post("/users", async (context) => {
     const input = await Effect.runPromise(readJson(context.req.raw));

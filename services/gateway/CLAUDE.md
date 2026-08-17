@@ -30,6 +30,12 @@ through the `AUTH` service binding, and its local D1/KV state persists under
 `bun run deploy` to publish and `bun run cf-typegen` after changing bindings in
 `wrangler.jsonc`.
 
+Production exposes this Worker at the exact Custom Domain
+`https://chikara.auth.otakuma.dev`; Cloudflare creates its DNS record and
+certificate during deployment. The downstream auth Worker remains private, so
+all public OAuth metadata, account pages, and `/api/auth/*` traffic continue to
+cross this gateway boundary.
+
 ## Service boundaries
 
 - Keep the default export in `src/index.ts` compatible with the Workers module

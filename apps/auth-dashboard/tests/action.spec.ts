@@ -11,7 +11,19 @@ describe("dashboard server actions", () => {
         "/sign-in",
       ),
     ).toBe(
-      "/two-factor?returnTo=%2Fprofile%3Fsource%3Dsign-in",
+      "/two-factor?returnTo=%2Fprofile%3Fsource%3Dsign-in&method=totp",
+    );
+    expect(
+      enhancedActionLocation(
+        {
+          twoFactorMethods: ["passkey", "totp"],
+          twoFactorRedirect: true,
+        },
+        "/profile",
+        "/sign-in",
+      ),
+    ).toBe(
+      "/two-factor?returnTo=%2Fprofile&method=passkey&method=totp",
     );
     expect(
       enhancedActionLocation({ ok: true }, "/profile", "/sign-in"),
@@ -122,7 +134,7 @@ describe("dashboard server actions", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://localhost/two-factor?returnTo=%2Fapis",
+      "http://localhost/two-factor?returnTo=%2Fapis&method=totp",
     );
     expect(response.headers.get("set-cookie")).toContain(
       "two-factor=challenge",

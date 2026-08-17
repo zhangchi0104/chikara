@@ -5,11 +5,10 @@ import Dialog from "./Dialog.astro";
 
 interface Props {
   idPrefix: string;
-  profile?: boolean;
   state: TwoFactorState;
 }
 
-const { idPrefix, profile = false, state } = Astro.props;
+const { idPrefix, state } = Astro.props;
 const enableDialog = `${idPrefix}-enable`;
 const resetDialog = `${idPrefix}-reset`;
 const regenerateDialog = `${idPrefix}-regenerate`;
@@ -17,21 +16,21 @@ const recoveryDialog = `${idPrefix}-recovery`;
 const current = twoFactorPresentation[state];
 const canEnroll = state === "disabled" || state === "pending";
 const canReset = state !== "disabled";
-const resetTitle = state === "enabled" ? "Disable two-factor" : "Reset authenticator setup";
+const resetTitle = state === "enabled" ? "Disable authenticator" : "Reset authenticator setup";
 const resetDescription = state === "enabled"
-  ? "Future password sign-ins will no longer require an authenticator code."
+  ? "Authenticator codes will no longer be available after password sign-in."
   : "Confirm your password to remove the incomplete security state and start again.";
-const resetLabel = state === "enabled" ? "Disable protection" : "Reset setup";
+const resetLabel = state === "enabled" ? "Disable authenticator" : "Reset setup";
 ---
 
 <otakuma-two-factor
-  class:list={["data-surface", "security-card", "two-factor-root", { "mt-6": profile }]}
+  class="data-surface security-card two-factor-root"
   data-two-factor-state={state}
 >
   <header class="security-card-head">
     <div>
-      <h2>Two-factor authentication</h2>
-      <p>Use an authenticator code after your password to protect this account.</p>
+      <h2>Authenticator app</h2>
+      <p>Use time-based codes as another way to verify password sign-ins.</p>
     </div>
     <span
       class:list={["badge", { neutral: state === "disabled", warning: state === "pending" || state === "inconsistent" }]}

@@ -1,4 +1,4 @@
-import { isTwoFactorRedirect } from "./action-outcome.js";
+import { isTwoFactorRedirect, twoFactorLocation } from "./action-outcome.js";
 import { safeLocalPath } from "./navigation.js";
 
 export type ActionForwarder = (
@@ -106,8 +106,10 @@ export async function handleAction(input: ActionRequest): Promise<Response> {
   if (credential) return oneTimePage(credential);
 
   if (isTwoFactorRedirect(value)) {
-    const challengeUrl = new URL("/two-factor", input.request.url);
-    challengeUrl.searchParams.set("returnTo", returnLocation(form));
+    const challengeUrl = new URL(
+      twoFactorLocation(value, returnLocation(form)),
+      input.request.url,
+    );
     return redirectWithCookies(response, challengeUrl.toString());
   }
 

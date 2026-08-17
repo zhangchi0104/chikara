@@ -1,5 +1,6 @@
 import { hashPassword } from "better-auth/crypto";
 import { createAuth } from "../auth.js";
+import { prepareAuthEventInsert } from "../auth-audit/auth-audit.store.js";
 import type { AuthBindings } from "../configs/auth.config.js";
 import { readTwoFactorState } from "../two-factor.state.js";
 import { isSuperuserId } from "./dashboard.access.js";
@@ -39,8 +40,13 @@ export async function getAccountSession(
     query: { disableCookieCache: true, disableRefresh: true },
   });
   if (!session) throw new DashboardError(401, "Sign in to continue.");
-  const [canManage, twoFactorState] = await Promise.all([
+  const [canManage, passkeys, twoFactorState] = await Promise.all([
     isSuperuserId(bindings.AUTH_DB, session.user.id),
+    bindings.AUTH_DB.prepare(
+      'SELECT COUNT(*) AS "count" FROM "passkey" WHERE "userId" = ?',
+    )
+      .bind(session.user.id)
+      .first<{ count: number }>(),
     readTwoFactorState(bindings.AUTH_DB, session.user.id),
   ]);
   return {
@@ -52,6 +58,7 @@ export async function getAccountSession(
       id: session.user.id,
       image: session.user.image ?? null,
       name: session.user.name,
+      passkeyCount: passkeys?.count ?? 0,
       twoFactorState,
     },
   };
@@ -108,6 +115,14 @@ export async function bootstrapSuperuser(
     bindings.AUTH_DB.prepare(
       "INSERT INTO dashboardSuperuser (singleton, userId, createdAt) VALUES (1, ?, ?)",
     ).bind(userId, now),
+    prepareAuthEventInsert(
+      bindings.AUTH_DB,
+      {
+        eventType: "account.provisioned",
+        subjectUserId: userId,
+      },
+      now,
+    ),
   ]).catch(() => {
     throw new DashboardError(
       409,

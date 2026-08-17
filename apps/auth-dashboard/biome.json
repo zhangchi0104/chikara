@@ -10,6 +10,7 @@
   "files": {
     "includes": [
       "src/**/*.ts",
+      "src/**/*.tsx",
       "!src/bindings.generated.d.ts",
       "src/**/*.css",
       "*.json",

@@ -5,6 +5,11 @@ import { admin, jwt, twoFactor } from "better-auth/plugins";
 import { Redacted } from "effect";
 import type { AuthConfig } from "../configs/auth.config.js";
 import {
+  assertPasskeyMfaCredential,
+  assertPasskeyUserVerification,
+  createPasskeyMfaPlugin,
+} from "../passkey-mfa.plugin.js";
+import {
   DASHBOARD_CLIENT_REFERENCE,
   oauthIdentifierOptions,
 } from "./oauth-identifiers.js";
@@ -42,10 +47,30 @@ export function createAuthOptions(
       admin(),
       jwt(),
       passkey({
+        authentication: {
+          afterVerification: async ({ clientData, ctx, verification }) => {
+            await assertPasskeyMfaCredential(
+              ctx,
+              clientData.id,
+              verification.authenticationInfo.userVerified,
+            );
+          },
+        },
+        authenticatorSelection: {
+          userVerification: "required",
+        },
         origin: passkeyOrigins,
+        registration: {
+          afterVerification: ({ verification }) => {
+            assertPasskeyUserVerification(
+              verification.registrationInfo?.userVerified === true,
+            );
+          },
+        },
         rpID: config.passkeyRpId,
         rpName: "Otakuma Auth",
       }),
+      createPasskeyMfaPlugin(),
       twoFactor({
         issuer: "Otakuma Auth",
       }),

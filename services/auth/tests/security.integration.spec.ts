@@ -192,6 +192,24 @@ describe("auth security integrations", () => {
       .bind("member@example.com")
       .first<{ id: string; twoFactorEnabled: number }>();
     expect(user?.twoFactorEnabled).toBe(1);
+    if (!user) throw new Error("The enrolled member was missing.");
+
+    await bindings.AUTH_DB.prepare(
+      `INSERT INTO "passkey"
+        ("id", "name", "publicKey", "userId", "credentialID", "counter", "deviceType", "backedUp", "transports", "createdAt")
+       VALUES (?, ?, ?, ?, ?, 0, ?, 0, ?, ?)`,
+    )
+      .bind(
+        "member-passkey",
+        "Phone",
+        "unused-public-key",
+        user.id,
+        "member-credential",
+        "singleDevice",
+        "internal",
+        new Date().toISOString(),
+      )
+      .run();
 
     const account = await createApp().request(
       "/api/dashboard/session",
@@ -203,6 +221,7 @@ describe("auth security integrations", () => {
       canManage: false,
       user: {
         email: "member@example.com",
+        passkeyCount: 1,
         twoFactorState: "enabled",
       },
     });
@@ -222,9 +241,48 @@ describe("auth security integrations", () => {
     );
     expect(challenged.status).toBe(200);
     expect(await challenged.json()).toEqual({
-      twoFactorMethods: ["totp"],
+      twoFactorMethods: ["passkey", "totp"],
       twoFactorRedirect: true,
     });
+    const challengeCookie = challenged.headers
+      .getSetCookie()
+      .find((cookie) => cookie.includes("two_factor="))
+      ?.split(";", 1)[0];
+    if (!challengeCookie)
+      throw new Error("The 2FA challenge cookie was missing.");
+    const methods = await auth.handler(
+      new Request("http://localhost:8787/api/auth/two-factor/methods", {
+        headers: { cookie: challengeCookie, origin: "http://localhost:4321" },
+      }),
+    );
+    expect(methods.status).toBe(200);
+    expect(await methods.json()).toEqual({
+      twoFactorMethods: ["passkey", "totp"],
+      twoFactorRedirect: true,
+    });
+    const loginCode = await auth.api.generateTOTP({
+      body: { secret: decodeBase32(secret) },
+    });
+    const completed = await auth.handler(
+      new Request("http://localhost:8787/api/auth/two-factor/verify-totp", {
+        body: JSON.stringify({ code: loginCode.code }),
+        headers: {
+          cookie: challengeCookie,
+          "content-type": "application/json",
+          origin: "http://localhost:4321",
+        },
+        method: "POST",
+      }),
+    );
+    expect(completed.status, await completed.clone().text()).toBe(200);
+    expect(await completed.json()).toMatchObject({ user: { id: user.id } });
+    const loginEvents = await bindings.AUTH_DB.prepare(
+      `SELECT COUNT(*) AS "count" FROM "authAuditEvent"
+       WHERE "subjectUserId" = ? AND "eventType" = 'login.succeeded'`,
+    )
+      .bind(user.id)
+      .first<{ count: number }>();
+    expect(loginEvents?.count).toBe(1);
 
     const regenerated = await auth.handler(
       new Request(

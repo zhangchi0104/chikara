@@ -15,19 +15,13 @@ interface StoredFactorState {
   readonly enabled: 0 | 1;
   readonly expected: TwoFactorState;
   readonly label: string;
-  readonly verified?: 0 | 1 | null;
+  readonly verified?: 0 | 1;
 }
 
 const states: ReadonlyArray<StoredFactorState> = [
   { enabled: 0, expected: "disabled", label: "disabled" },
   { enabled: 0, expected: "pending", label: "pending", verified: 0 },
   { enabled: 1, expected: "enabled", label: "enabled", verified: 1 },
-  {
-    enabled: 1,
-    expected: "enabled",
-    label: "enabled with a legacy null verification flag",
-    verified: null,
-  },
   {
     enabled: 0,
     expected: "inconsistent",
@@ -139,6 +133,17 @@ describe("two-factor mutation guard", () => {
     expect(await readTwoFactorState(database, "missing-user")).toBe(
       "inconsistent",
     );
+  });
+
+  it("rejects a nullable authenticator verification flag", async () => {
+    await expect(
+      database
+        .prepare(
+          'INSERT INTO "twoFactor" (id, secret, backupCodes, userId, verified) VALUES (?, ?, ?, ?, NULL)',
+        )
+        .bind("nullable-factor", "secret", "codes", "member-1")
+        .run(),
+    ).rejects.toThrow(/TWO_FACTOR_VERIFICATION_REQUIRED/);
   });
 
   it("finds a recoverable sign-in from form data using normalized email", async () => {

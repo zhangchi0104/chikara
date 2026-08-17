@@ -95,23 +95,40 @@ Pass an optional location hint with
 `bun run db:create -- --location oc`. The script does not create another
 database when `AUTH_DB` already has a real UUID.
 
-Set `BETTER_AUTH_URL` and optional trusted origins as Worker environment values
-for the deployed environment. Include the deployed dashboard origin in
-`AUTH_TRUSTED_ORIGINS`. The OAuth/OIDC issuer is
-`$BETTER_AUTH_URL/api/auth`; PKCE authorization-code clients use `S256`.
+Production auth uses `https://chikara.auth.otakuma.dev`, which is attached to
+the public gateway Worker as a Cloudflare Custom Domain. The account dashboard
+uses `https://dashboard.auth.otakuma.dev`; the auth Worker remains private and
+is reached only through service bindings. Wrangler creates both DNS records and
+their certificates during deployment, so do not pre-create CNAME records for
+these hostnames. The OAuth/OIDC issuer is
+`https://chikara.auth.otakuma.dev/api/auth`; PKCE authorization-code clients
+use `S256`.
 
 The auth Worker also supports WebAuthn passkeys and TOTP-based two-factor
 authentication with encrypted recovery data. Authenticated clients can use the
 Better Auth endpoints under `/api/auth/passkey/*` to register, list, rename,
 and remove passkeys, and `/api/auth/two-factor/*` to enroll TOTP, verify codes,
 manage backup codes, and complete sign-in challenges. The WebAuthn relying-party
-ID defaults to the hostname in `BETTER_AUTH_URL`. When auth and dashboard use
-sibling hosts, set `AUTH_PASSKEY_RP_ID` to their shared registrable domain (for
-example, `example.com` for `auth.example.com` and `dashboard.example.com`).
-WebAuthn verification also accepts the HTTP(S) origins listed in
-`AUTH_TRUSTED_ORIGINS`, so include the deployed dashboard origin there (HTTPS
-outside local development). Startup rejects an RP ID that cannot be used from
-one of those configured web origins.
+ID defaults to the hostname in `BETTER_AUTH_URL`. Production narrows the shared
+RP ID to `auth.otakuma.dev`, covering only the public auth and account-dashboard
+hosts. WebAuthn verification also accepts the HTTP(S) origins listed in
+`AUTH_TRUSTED_ORIGINS`; production includes
+`https://dashboard.auth.otakuma.dev`, while local values remain in
+`services/auth/.dev.vars`. Startup rejects an RP ID that cannot be used from one
+of the configured web origins.
+New Passkey registrations and Passkey-first sign-in require device user
+verification, so a Passkey-first sign-in completes MFA directly. A password
+sign-in for an account with a Passkey is held at a one-time challenge that
+accepts only a Passkey owned by that account; the password supplies the
+knowledge factor and WebAuthn user presence supplies the possession factor.
+Verified TOTP and recovery codes remain alternatives when enrolled.
+Account Security reports MFA as enabled when either a Passkey or verified
+authenticator app is available, while keeping each method's setup state clear.
+Passkeys created by older configurations can continue to protect password
+sign-ins through user presence, but direct Passkey-first sign-in succeeds only
+when the device produces a user-verified assertion. Migration
+`0008_unique_passkey_credential.sql` refuses duplicate WebAuthn credential IDs
+instead of deleting an ambiguous row automatically.
 Account-level two-factor mutations are serialized per user by the auth Worker's
 `TwoFactorCoordinator` Durable Object so concurrent browser tabs cannot replace
 an already verified authenticator secret. If an older or interrupted write
@@ -119,7 +136,8 @@ leaves an account marked as protected without any verified factor, the same
 coordinator repairs that broken state only after a successful password check,
 then completes a fresh sign-in.
 
-Deploy the auth Worker first and then the dashboard Worker with:
+Apply migrations and deploy the private auth Worker, public gateway, and
+dashboard in dependency order with:
 
 ```sh
 bun run deploy:auth-dashboard

@@ -7,6 +7,11 @@ interface PublicPageAction {
 
 type TwoFactorMethod = "totp" | "recovery";
 
+interface TwoFactorRedirect {
+  readonly twoFactorMethods?: unknown;
+  readonly twoFactorRedirect: true;
+}
+
 function errorResponse(message: string, status = 400): Response {
   return Response.json({ message }, { status });
 }
@@ -72,12 +77,28 @@ function redirectUrl(payload: unknown): string | undefined {
   return typeof payload.url === "string" ? payload.url : undefined;
 }
 
-function requiresTwoFactor(payload: unknown): boolean {
+function requiresTwoFactor(payload: unknown): payload is TwoFactorRedirect {
   return (
     typeof payload === "object" &&
     payload !== null &&
     "twoFactorRedirect" in payload &&
     payload.twoFactorRedirect === true
+  );
+}
+
+export function challengeMethods(
+  payload: unknown,
+): ReadonlyArray<"passkey" | "totp"> {
+  if (
+    !requiresTwoFactor(payload) ||
+    !("twoFactorMethods" in payload) ||
+    !Array.isArray(payload.twoFactorMethods)
+  ) {
+    return [];
+  }
+  return payload.twoFactorMethods.filter(
+    (method): method is "passkey" | "totp" =>
+      method === "passkey" || method === "totp",
   );
 }
 
@@ -103,10 +124,13 @@ function sameOriginLocation(request: Request, pathname: string): string {
   return new URL(pathname, request.url).toString();
 }
 
-function twoFactorLocation(request: Request): string {
+function twoFactorLocation(request: Request, payload: unknown): string {
   const url = new URL("/two-factor", request.url);
   const oauthQuery = signedOAuthQuery(new URL(request.url).searchParams);
   url.search = oauthQuery ?? "";
+  for (const method of challengeMethods(payload)) {
+    url.searchParams.append("method", method);
+  }
   return url.toString();
 }
 
@@ -134,7 +158,7 @@ export async function handleSignInPageAction(
 
   const payload = await responsePayload(response);
   const location = requiresTwoFactor(payload)
-    ? twoFactorLocation(action.request)
+    ? twoFactorLocation(action.request, payload)
     : (redirectUrl(payload) ?? sameOriginLocation(action.request, "/"));
   return redirectWithCookies(response, location);
 }
