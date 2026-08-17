@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-15T05:31:28Z",
+  "generatedAt": "2026-08-16T11:04:22Z",
   "title": "Design System: Otakuma Auth Dashboard",
   "extensions": {
     "colorMeta": {
@@ -57,6 +57,11 @@
         "name": "toast",
         "value": "0 12px 35px rgba(17, 24, 39, 0.22)",
         "purpose": "Separate transient feedback from the workspace."
+      },
+      {
+        "name": "account-menu",
+        "value": "0 18px 42px rgba(23, 32, 51, 0.2)",
+        "purpose": "Lift the account popover above either the dark rail or light profile bar."
       }
     ],
     "motion": [
@@ -73,7 +78,9 @@
     ],
     "breakpoints": [
       { "name": "compact", "value": "520px" },
-      { "name": "mobile", "value": "820px" }
+      { "name": "profile-compact", "value": "620px" },
+      { "name": "mobile", "value": "820px" },
+      { "name": "security-stack", "value": "980px" }
     ]
   },
   "components": [
@@ -114,36 +121,76 @@
       "description": "A compact dark-rail destination with an orange active signal.",
       "html": "<a class=\"ds-nav-item\" href=\"#apis\"><span aria-hidden=\"true\">◇</span><span>APIs</span></a>",
       "css": ".ds-nav-item { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 11px; border-radius: 9px; background: #2a364b; color: #fff; font: 600 15px/1.5 Inter, ui-sans-serif, sans-serif; text-decoration: none; } .ds-nav-item > span:first-child { color: #ff8a5d; } .ds-nav-item:hover { background: #344158; } .ds-nav-item:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; }"
+    },
+    {
+      "name": "Account Menu",
+      "kind": "nav",
+      "description": "A reusable identity trigger and account-action popover for light and dark navigation hosts.",
+      "html": "<div class=\"ds-account-menu\"><button class=\"ds-account-trigger\" type=\"button\" aria-controls=\"ds-account-popover\" aria-expanded=\"true\" aria-haspopup=\"menu\" aria-label=\"Open account menu for Avery Chen\"><span class=\"ds-account-avatar\" aria-hidden=\"true\">A</span><span class=\"ds-account-copy\"><strong>Avery Chen</strong><small>Member</small></span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m8 10 4 4 4-4\"/></svg></button><div class=\"ds-account-popover\" id=\"ds-account-popover\" role=\"menu\" aria-label=\"Account\"><div class=\"ds-account-identity\"><strong>Avery Chen</strong><small>avery@example.com</small></div><div class=\"ds-account-actions\"><a class=\"ds-account-item ds-account-current\" href=\"#profile\" role=\"menuitem\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/></svg><span>Profile</span></a><button class=\"ds-account-item\" type=\"button\" role=\"menuitem\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-6\"/></svg><span>Log out</span></button></div></div></div>",
+      "css": ".ds-account-menu { width: min(260px, calc(100vw - 32px)); color: #172033; font: 400 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-account-trigger { display: flex; width: 100%; min-height: 46px; align-items: center; gap: 10px; padding: 6px; border: 1px solid #dce1e8; border-radius: 10px; background: #f6f7f9; color: #172033; text-align: left; } .ds-account-trigger:hover { background: #f1f3f6; } .ds-account-trigger:focus-visible, .ds-account-item:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; } .ds-account-avatar { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: #2b3a54; color: #fff; font-weight: 700; } .ds-account-copy { min-width: 0; display: grid; flex: 1; } .ds-account-copy strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; } .ds-account-copy small { overflow: hidden; color: #5c667a; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; } .ds-account-trigger svg, .ds-account-item svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; } .ds-account-popover { margin-top: 10px; overflow: hidden; border: 1px solid #dce1e8; border-radius: 12px; background: #fff; box-shadow: 0 18px 42px rgba(23, 32, 51, 0.2); } .ds-account-identity { display: grid; gap: 2px; padding: 14px 15px; border-bottom: 1px solid #dce1e8; } .ds-account-identity strong, .ds-account-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-account-identity strong { font-size: 14px; } .ds-account-identity small { color: #5c667a; font-size: 12px; } .ds-account-actions { display: grid; gap: 3px; padding: 6px; } .ds-account-item { display: flex; width: 100%; min-height: 40px; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #172033; font: 650 15px/1.5 Inter, ui-sans-serif, sans-serif; text-align: left; text-decoration: none; } .ds-account-item:hover, .ds-account-current { background: #f1f3f6; } .ds-account-current svg { color: #c9471b; }"
+    },
+    {
+      "name": "Two-Factor Authentication Panel",
+      "kind": "custom",
+      "description": "The shared state-driven account-security panel used on Profile and administrator Security; this sample shows the manual two-step enrollment state.",
+      "html": "<article class=\"ds-two-factor\"><header class=\"ds-two-factor-head\"><div><h2>Two-factor authentication</h2><p>Use an authenticator code after your password to protect this account.</p></div><span class=\"ds-two-factor-badge\">Not enabled</span></header><div class=\"ds-two-factor-body\"><p class=\"ds-two-factor-status\" role=\"status\" aria-live=\"polite\">Setup generated. Verify a code to finish enabling protection.</p><section class=\"ds-two-factor-setup\" aria-labelledby=\"ds-two-factor-setup-title\"><div><h3 id=\"ds-two-factor-setup-title\">Finish authenticator setup</h3><p>Add the setup key to your authenticator, then verify one six-digit code.</p></div><div class=\"ds-two-factor-step\"><span aria-hidden=\"true\">1</span><div><strong>Add the setup key</strong><p>Open a compatible authenticator app or enter this key manually.</p><pre><code>JBSW Y3DP EHPK 3PXP</code></pre><div class=\"ds-two-factor-actions\"><a href=\"#authenticator\">Open authenticator app</a><button type=\"button\">Copy setup key</button></div></div></div><div class=\"ds-two-factor-step\"><span aria-hidden=\"true\">2</span><form><label><span>Authenticator code</span><input inputmode=\"numeric\" autocomplete=\"one-time-code\" pattern=\"[0-9]{6}\" maxlength=\"6\" aria-label=\"Authenticator code\"></label><button class=\"ds-two-factor-primary\" type=\"submit\">Verify code</button></form></div></section></div></article>",
+      "css": ".ds-two-factor { overflow: hidden; border: 1px solid #dce1e8; border-radius: 12px; background: #fff; color: #172033; font: 400 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-two-factor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 24px 20px; border-bottom: 1px solid #dce1e8; } .ds-two-factor-head h2, .ds-two-factor-setup h3 { margin: 0; } .ds-two-factor-head h2 { font-size: 21px; letter-spacing: -0.025em; } .ds-two-factor-head p, .ds-two-factor-setup p { margin: 6px 0 0; color: #5c667a; font-size: 13px; } .ds-two-factor-badge { display: inline-flex; min-height: 24px; align-items: center; padding: 2px 8px; border-radius: 999px; background: #edf0f4; color: #566174; font-size: 12px; font-weight: 700; white-space: nowrap; } .ds-two-factor-body { display: grid; gap: 17px; padding: 22px 24px 24px; } .ds-two-factor-status { display: flex; align-items: center; gap: 9px; margin: 0; color: #5c667a; font-size: 13px; } .ds-two-factor-status::before { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #c9471b; content: \"\"; } .ds-two-factor-setup { display: grid; gap: 15px; padding: 16px; border: 1px solid #f4c7b5; border-radius: 10px; background: #fff0e9; } .ds-two-factor-setup h3 { font-size: 14px; } .ds-two-factor-step { display: grid; grid-template-columns: 25px minmax(0, 1fr); align-items: start; gap: 10px; } .ds-two-factor-step > span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: #c9471b; color: #fff; font-size: 12px; font-weight: 750; } .ds-two-factor-step pre { margin: 9px 0 0; overflow-wrap: anywhere; padding: 10px; border-radius: 8px; background: #111827; color: #f7f8fb; font: 400 11px/1.5 SFMono-Regular, Consolas, monospace; white-space: pre-wrap; } .ds-two-factor-actions, .ds-two-factor-step form { display: flex; align-items: end; flex-wrap: wrap; gap: 9px; margin-top: 10px; } .ds-two-factor-actions a, .ds-two-factor-actions button, .ds-two-factor-step form button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid #c4ccd7; border-radius: 9px; background: #fff; color: #172033; font: 650 13px/1.5 Inter, ui-sans-serif, sans-serif; text-decoration: none; } .ds-two-factor-step label { display: grid; flex: 1; gap: 6px; font-size: 13px; font-weight: 680; } .ds-two-factor-step input { min-height: 42px; padding: 9px 11px; border: 1px solid #c4ccd7; border-radius: 9px; color: #172033; font: inherit; letter-spacing: 0.16em; text-align: center; } .ds-two-factor-step form .ds-two-factor-primary { border-color: #c9471b; background: #c9471b; color: #fff; } .ds-two-factor-actions a:hover, .ds-two-factor-actions button:hover { background: #f4f6f9; } .ds-two-factor-step form .ds-two-factor-primary:hover { border-color: #a83a16; background: #a83a16; } .ds-two-factor a:focus-visible, .ds-two-factor button:focus-visible, .ds-two-factor input:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; } @media (max-width: 520px) { .ds-two-factor-head, .ds-two-factor-step form { align-items: stretch; flex-direction: column; } .ds-two-factor-head, .ds-two-factor-body { padding-right: 18px; padding-left: 18px; } .ds-two-factor-actions a, .ds-two-factor-actions button { min-height: 44px; } }"
+    },
+    {
+      "name": "Locked Recovery-Code Dialog",
+      "kind": "custom",
+      "description": "A one-time recovery-code handoff with no close affordance; Escape remains blocked until explicit saved-code acknowledgement.",
+      "html": "<dialog class=\"ds-recovery-dialog\" open data-locked=\"true\" aria-labelledby=\"ds-recovery-title\" aria-describedby=\"ds-recovery-description\"><header><h2 id=\"ds-recovery-title\">Save your recovery codes</h2><p id=\"ds-recovery-description\">Each code works once. This set disappears after you confirm it is saved.</p></header><div class=\"ds-recovery-body\"><p>Store these codes in a password manager or another secure place before continuing.</p><ul><li>ABCD-EFGH</li><li>JKLM-NPQR</li><li>STUV-WXYZ</li><li>2345-6789</li></ul><p class=\"ds-recovery-status\" role=\"status\" aria-live=\"polite\"></p><div class=\"ds-recovery-actions\"><button type=\"button\">Copy codes</button><button class=\"ds-recovery-primary\" type=\"button\">I saved these codes</button></div></div></dialog>",
+      "css": ".ds-recovery-dialog[open] { position: relative; inset: auto; display: block; width: min(560px, calc(100% - 28px)); margin: 0; padding: 0; border: 0; border-radius: 15px; background: #fff; box-shadow: 0 24px 70px rgba(17, 24, 39, 0.28); color: #172033; font: 400 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-recovery-dialog header { padding: 24px 24px 18px; border-bottom: 1px solid #dce1e8; } .ds-recovery-dialog h2 { margin: 0; font-size: 21px; } .ds-recovery-dialog header p, .ds-recovery-body > p { margin: 5px 0 0; color: #5c667a; font-size: 13px; } .ds-recovery-body { display: grid; gap: 17px; padding: 22px 24px 24px; } .ds-recovery-body > p { margin: 0; } .ds-recovery-body ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 14px; border-radius: 9px; background: #111827; color: #f7f8fb; font: 400 13px/1.5 SFMono-Regular, Consolas, monospace; list-style: none; } .ds-recovery-body li { overflow-wrap: anywhere; user-select: text; } .ds-recovery-status:empty { display: none; } .ds-recovery-actions { display: flex; justify-content: flex-end; gap: 9px; } .ds-recovery-actions button { min-height: 40px; padding: 0 15px; border: 1px solid #c4ccd7; border-radius: 9px; background: #fff; color: #172033; font: 680 15px/1.5 Inter, ui-sans-serif, sans-serif; } .ds-recovery-actions .ds-recovery-primary { border-color: #c9471b; background: #c9471b; color: #fff; } .ds-recovery-actions button:hover { background: #f4f6f9; } .ds-recovery-actions .ds-recovery-primary:hover { border-color: #a83a16; background: #a83a16; } .ds-recovery-actions button:focus-visible { outline: 3px solid #b43f17; outline-offset: 2px; } @media (max-width: 520px) { .ds-recovery-dialog header, .ds-recovery-body { padding-right: 18px; padding-left: 18px; } .ds-recovery-body ul { grid-template-columns: 1fr; } .ds-recovery-actions { align-items: stretch; flex-direction: column; } }"
     }
   ],
   "narrative": {
     "northStar": "The Identity Workbench",
-    "overview": "Otakuma Auth is a compact operations console: dependable, direct, and quiet enough to keep attention on identity data. Auth0 supplies the familiar management grammar while Cloudflare supplies the dense, infrastructure-oriented workbench. Brand appears through ink navy, paper-white working surfaces, and a rare warm-orange signal.\n\nThe system avoids a generic dashboard of decorative metric cards. APIs and their Applications are the organizing relationship, with lists and details kept close enough to support fast operational comparison.\n\nAuthentication uses the same visual world at a more declarative scale: a dark identity field holds product and security context while a white credential sheet keeps the one-way bootstrap or sign-in task focused.",
+    "overview": "Otakuma Auth is a compact operations console: dependable, direct, and quiet enough to keep attention on identity data. Auth0 supplies the familiar management grammar while Cloudflare supplies the dense, infrastructure-oriented workbench. Brand appears through ink navy, paper-white working surfaces, and a rare warm-orange signal.\n\nThe system avoids a generic dashboard of decorative metric cards. APIs and their Applications are the organizing relationship, with lists and details kept close enough to support fast operational comparison.\n\nAuthentication uses the same visual world at a more declarative scale: a dark identity field holds product and security context while a white credential sheet keeps the one-way bootstrap or sign-in task focused.\n\nSigned-in account surfaces use the same workbench vocabulary at a calmer, personal scale. A paper-white identity ledger and one dark access summary let members verify who they are and what they can reach; management navigation remains an administrator-only affordance.\n\nAccount protection is expressed once through a shared state-driven panel. It sits below the personal Profile record for every member and beside Passkeys on the administrator Security page without changing its setup or recovery contract.",
     "keyCharacteristics": [
       "Compact tables",
       "Strong information hierarchy",
       "First-party system typography",
       "Crisp line icons",
       "Explicit destructive states",
-      "Responsive master-detail navigation"
+      "Responsive master-detail navigation",
+      "Focused personal identity records",
+      "Shared state-driven account security"
     ],
     "rules": [
       {
         "name": "The Signal Rule",
         "body": "Orange marks an action or selected object; it is never used as broad decoration.",
         "section": "colors"
+      },
+      {
+        "name": "The Local Setup Rule",
+        "body": "Expose the generated key and its `otpauth:` deep link, but never send the setup URI to a third-party QR service.",
+        "section": "components"
+      },
+      {
+        "name": "The Recovery Acknowledgement Rule",
+        "body": "Keep one-time recovery codes in a locked dialog until the member explicitly confirms they are saved.",
+        "section": "components"
       }
     ],
     "dos": [
       "Do preserve the API-to-Applications relationship as the primary information architecture.",
       "Do keep destructive consequences beside their action and require confirmation.",
-      "Do use native controls and clear focus states for keyboard operation."
+      "Do use native controls and clear focus states for keyboard operation.",
+      "Do place personal identity and access context before account actions.",
+      "Do preserve accessible names and keyboard behavior when account controls become compact.",
+      "Do reuse the same two-factor states, setup steps, and recovery behavior on Profile and administrator Security.",
+      "Do announce asynchronous security status, copy feedback, and adjacent errors without moving keyboard focus unexpectedly."
     ],
     "donts": [
       "Don't call an OAuth Application a “client” in product copy.",
       "Don't turn orange into decorative surface area or add vanity metric cards.",
       "Don't persist, log, or redisplay an Application credential.",
-      "Don't hide operational data behind hover-only interactions."
+      "Don't hide operational data behind hover-only interactions.",
+      "Don't expose administrator navigation or actions to a member account.",
+      "Don't send an `otpauth:` setup URI to a third-party QR generator.",
+      "Don't allow one-time recovery codes to be dismissed before explicit acknowledgement."
     ]
   }
 }

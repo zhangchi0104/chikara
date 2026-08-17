@@ -8,7 +8,7 @@ import DashboardLayout from "../layouts/DashboardLayout.astro";
 import { getApis, getApplications, getOauthEndpoints } from "../lib/auth.js";
 import { formatDate, type Api, type Application } from "../lib/models.js";
 
-const superuser = Astro.locals.superuser;
+const superuser = Astro.locals.account.user;
 const [applicationResult, apiResult, endpointResult] = await Promise.all([
   getApplications(Astro.request),
   getApis(Astro.request),

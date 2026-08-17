@@ -1,12 +1,50 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountSession,
   applications,
   bootstrapStatus,
   oauthEndpoints,
-  session,
 } from "../src/lib/contract.js";
 
 describe("dashboard transport contract", () => {
+  it("reads a signed-in account and its server-derived access", () => {
+    expect(
+      accountSession({
+        canManage: false,
+        user: {
+          createdAt: "2026-08-16T00:00:00.000Z",
+          email: "member@example.com",
+          emailVerified: true,
+          id: "user-1",
+          image: null,
+          name: "Member",
+          twoFactorState: "disabled",
+        },
+      }),
+    ).toEqual({
+      canManage: false,
+      user: {
+        createdAt: "2026-08-16T00:00:00.000Z",
+        email: "member@example.com",
+        emailVerified: true,
+        id: "user-1",
+        image: null,
+        name: "Member",
+        twoFactorState: "disabled",
+      },
+    });
+    expect(
+      accountSession({
+        canManage: false,
+        user: {
+          email: "member@example.com",
+          id: "user-1",
+          name: "Member",
+        },
+      }),
+    ).toBeUndefined();
+  });
+
   it("accepts the shared Application representation", () => {
     expect(
       applications({
@@ -39,7 +77,6 @@ describe("dashboard transport contract", () => {
         ],
       }),
     ).toBeUndefined();
-    expect(session({ user: { id: "user-1" } })).toBeUndefined();
     expect(bootstrapStatus({ bootstrapped: "yes" })).toBeUndefined();
   });
 

@@ -1,8 +1,9 @@
 # Otakuma Auth Dashboard
 
-An Astro server-rendered operations console deployed to Cloudflare Workers. It
-manages the auth Worker's users, protected APIs, and OAuth Applications through
-the `AUTH` service binding.
+An Astro server-rendered account and operations console deployed to Cloudflare
+Workers. Signed-in members land on their profile and can enroll their own TOTP
+two-factor authentication; the sole superuser can also manage users, protected
+APIs, and OAuth Applications through the `AUTH` service binding.
 
 ## Local development
 
@@ -22,6 +23,15 @@ auxiliary Worker and persists its D1 and KV state in
 
 The auth service's `.dev.vars` must include `http://localhost:4321` in
 `AUTH_TRUSTED_ORIGINS`. In production, use the deployed dashboard origin.
+
+## Styling
+
+Tailwind CSS 4 runs through its Vite plugin. `src/styles/global.css` imports
+Tailwind's theme and utilities without Preflight so the remaining legacy
+dashboard styles keep their existing browser defaults during migration. New or
+migrated UI should use complete, statically detectable utility class names;
+shared legacy styles remain in the lower-priority `base` and `components`
+layers until their whole surface can be removed.
 
 ## Deployment
 

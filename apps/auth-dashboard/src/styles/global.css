@@ -1,4 +1,21 @@
-@import "./foundation.css";
-@import "./workspace.css";
-@import "./auth.css";
-@import "./responsive.css";
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "./foundation.css" layer(base);
+@import "./workspace.css" layer(components);
+@import "./auth.css" layer(components);
+@import "./security.css" layer(components);
+@import "./responsive.css" layer(components);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-nav: var(--nav);
+  --color-paper: var(--paper);
+  --color-signal: var(--signal);
+  --radius-surface: var(--radius);
+}
+
+@custom-variant mobile (@media (width <= 820px));
+@custom-variant profile-compact (@media (width <= 620px));

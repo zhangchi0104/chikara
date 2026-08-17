@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import cloudflare from "@astrojs/cloudflare";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 const authConfigPath = fileURLToPath(
@@ -22,4 +23,7 @@ export default defineConfig({
   }),
   output: "server",
   server: { port: 4321 },
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

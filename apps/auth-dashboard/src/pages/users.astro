@@ -7,7 +7,7 @@ import DashboardLayout from "../layouts/DashboardLayout.astro";
 import { getUsers } from "../lib/auth.js";
 import { formatDate, initials, type User } from "../lib/models.js";
 
-const superuser = Astro.locals.superuser;
+const superuser = Astro.locals.account.user;
 const result = await getUsers(Astro.request);
 const loadFailed = !result.data;
 const users: ReadonlyArray<User> = result.data ?? [];

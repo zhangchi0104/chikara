@@ -1,3 +1,7 @@
+import type { TwoFactorState } from "../two-factor.state.js";
+
+export type { TwoFactorState } from "../two-factor.state.js";
+
 export interface DashboardUser {
   readonly createdAt: number | string;
   readonly email: string;
@@ -5,6 +9,21 @@ export interface DashboardUser {
   readonly id: string;
   readonly name: string;
   readonly sessionCount: number;
+}
+
+export interface AccountProfile {
+  readonly createdAt: string;
+  readonly email: string;
+  readonly emailVerified: boolean;
+  readonly id: string;
+  readonly image: string | null;
+  readonly name: string;
+  readonly twoFactorState: TwoFactorState;
+}
+
+export interface AccountSession {
+  readonly canManage: boolean;
+  readonly user: AccountProfile;
 }
 
 export interface DashboardApi {

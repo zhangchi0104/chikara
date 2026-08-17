@@ -1,0 +1,111 @@
+---
+import type { AccountSession } from "../lib/models.js";
+import Icon from "../components/Icon.astro";
+import ProfileMenu from "../components/ProfileMenu.astro";
+import "../styles/global.css";
+
+interface Props {
+  account: AccountSession;
+  description: string;
+  title: string;
+}
+
+const { account, description, title } = Astro.props;
+const navLinkClasses =
+  "flex min-h-[42px] items-center gap-[11px] rounded-[9px] px-[11px] font-semibold text-[#bfc8d7] hover:bg-[#19253a] hover:text-white aria-[current=page]:bg-[#2a364b] aria-[current=page]:text-white aria-[current=page]:[&_svg]:text-[#ff8a5d]";
+const navLabelClasses =
+  "mx-2.5 mb-2 text-[11px] font-bold tracking-[0.08em] text-[#8e9ab0] uppercase mobile:hidden";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#111827" />
+    <title>{title} · Otakuma Auth</title>
+  </head>
+  <body class="min-w-80 mobile:pb-0">
+    <Fragment set:html={`<!--
+THESIS: A signed-in person meets their identity as one clear record, refusing to turn a personal profile into another admin dashboard.
+OWN-WORLD: An ink-navy account rail anchors paper-white identity surfaces, precise account rows, and warm signal-orange actions.
+STORY: The member moves from their personal account context into identity facts and sign-in protection; an administrator can return to operations.
+FIRST VIEWPORT: A compact account sidebar anchors a focused identity workspace, with Profile selected and account controls held at the rail's foot.
+FORM: Identity ledger, selected directly for the specified account task; seed key precise-profile-extension.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->`} />
+    <a
+      class="fixed top-3 left-4 z-40 inline-flex min-h-10 -translate-y-[calc(100%+20px)] items-center rounded-[9px] bg-signal px-3.5 font-bold text-white focus-visible:translate-y-0"
+      href="#profile-main"
+    >
+      Skip to profile content
+    </a>
+    <div class="grid min-h-screen grid-cols-[240px_minmax(0,1fr)] mobile:block">
+      <aside
+        class="sticky top-0 grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-visible bg-nav px-4 pt-6 pb-[18px] text-[#e9edf5] mobile:z-20 mobile:h-auto mobile:min-h-[68px] mobile:w-full mobile:flex mobile:flex-row mobile:items-center mobile:gap-3 mobile:px-[18px] mobile:py-2.5 profile-compact:px-4"
+      >
+        <a
+          class="inline-flex items-center gap-[11px] text-[18px] font-[720] tracking-[-0.02em] profile-compact:[&>span:last-child]:hidden"
+          href="/profile"
+          aria-label="Otakuma Auth profile"
+        >
+          <span
+            class="grid size-[30px] place-items-center rounded-[9px] bg-signal text-[11px] font-extrabold tracking-[0.04em] text-white"
+            aria-hidden="true"
+          >OA</span>
+          <span>Otakuma Auth</span>
+        </a>
+        <nav
+          class="mt-9 grid min-h-0 content-start gap-[5px] overflow-y-auto overscroll-contain mobile:ml-auto mobile:mt-0 mobile:flex mobile:items-center mobile:gap-1.5 mobile:overflow-visible"
+          aria-label="Account"
+        >
+          <p class:list={[navLabelClasses, "mt-0"]}>Account</p>
+          <a class:list={[navLinkClasses, "mobile:hidden"]} href="/profile" aria-current="page">
+            <Icon name="user" />
+            <span>Profile</span>
+          </a>
+          {account.canManage && (
+            <>
+              <p class:list={[navLabelClasses, "mt-[26px]"]}>Management</p>
+              <a
+                class:list={[
+                  navLinkClasses,
+                  "mobile:min-h-11 mobile:px-3 profile-compact:w-11 profile-compact:justify-center profile-compact:px-0 profile-compact:[&>span:last-child]:hidden",
+                ]}
+                href="/apis"
+                aria-label="Back to dashboard"
+              >
+                <span class="grid rotate-180"><Icon name="arrow" /></span>
+                <span>Dashboard</span>
+              </a>
+            </>
+          )}
+        </nav>
+        <div class="mt-auto flex w-full shrink-0 items-center gap-2 border-t border-[#2b374c] pt-[18px] mobile:m-0 mobile:w-auto mobile:border-0 mobile:p-0">
+          <ProfileMenu
+            compactOnMobile
+            current
+            id="profile-page-account-menu"
+            label={account.canManage ? "Administrator" : "Member"}
+            mobilePlacement="bottom-right"
+            tone="dark"
+            user={account.user}
+          />
+        </div>
+      </aside>
+      <main
+        class="min-w-0 px-[clamp(24px,4vw,64px)] pt-10 pb-16 mobile:px-6 mobile:pt-[34px] mobile:pb-14 profile-compact:px-4 profile-compact:pt-8 profile-compact:pb-12"
+        id="profile-main"
+      >
+        <div class="mx-auto w-full max-w-[960px]">
+          <header class="mb-7">
+            <h1 class="m-0 text-[clamp(32px,4vw,42px)] leading-[1.08] tracking-[-0.035em]">{title}</h1>
+            <p class="mt-[9px] mb-0 max-w-[65ch] text-ink-soft">{description}</p>
+          </header>
+          <slot />
+        </div>
+      </main>
+    </div>
+    <script src="../scripts/profile-menu.ts"></script>
+  </body>
+</html>

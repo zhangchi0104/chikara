@@ -23,9 +23,26 @@ async function request(path, body) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.message || payload.error || "Request failed");
+    const message = payload && typeof payload === "object"
+      ? payload.message || payload.error
+      : undefined;
+    throw new Error(message || "Request failed");
   }
-  if (payload.url) window.location.assign(payload.url);
+  return payload;
+}
+
+function twoFactorURL() {
+  const url = new URL("/two-factor", window.location.origin);
+  if (oauthQuery) url.search = oauthQuery;
+  return url.toString();
+}
+
+function finishAuthentication(payload) {
+  if (payload && typeof payload.url === "string") {
+    window.location.assign(payload.url);
+    return;
+  }
+  window.location.assign("/");
 }
 
 function showError(error) {
@@ -67,7 +84,7 @@ export function signInPage(): string {
   return page(
     "Sign in",
     `<h1>Sign in to Otakuma Auth</h1>
-    <form data-form>
+    <form method="post" data-form>
       <label>Email <input name="email" type="email" autocomplete="email" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
       <button type="submit">Sign in</button>
@@ -80,21 +97,64 @@ document.querySelector("[data-form]").addEventListener("submit", async (event) =
   event.preventDefault();
   const values = new FormData(event.currentTarget);
   try {
-    await request("/api/auth/sign-in/email", {
+    const payload = await request("/api/auth/sign-in/email", {
       email: values.get("email"),
       password: values.get("password"),
       rememberMe: true,
     });
+    if (payload && payload.twoFactorRedirect === true) {
+      window.location.assign(twoFactorURL());
+      return;
+    }
+    finishAuthentication(payload);
   } catch (error) { showError(error); }
 });`,
+  );
+}
+
+export function twoFactorPage(): string {
+  return page(
+    "Verify your sign-in",
+    `<h1>Verify your sign-in</h1>
+    <p class="muted">Enter the six-digit code from your authenticator app.</p>
+    <form method="post" data-two-factor-form data-endpoint="/api/auth/two-factor/verify-totp">
+      <input name="factor" type="hidden" value="totp">
+      <label>Authenticator code <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus></label>
+      <button type="submit">Verify and continue</button>
+    </form>
+    <p class="muted">Or use one of your recovery codes.</p>
+    <form method="post" data-two-factor-form data-endpoint="/api/auth/two-factor/verify-backup-code">
+      <input name="factor" type="hidden" value="recovery">
+      <label>Recovery code <input name="code" autocomplete="off" spellcheck="false" required></label>
+      <button type="submit">Use recovery code</button>
+    </form>
+    <p data-error hidden></p>`,
+    `
+for (const form of document.querySelectorAll("[data-two-factor-form]")) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"]');
+    const values = new FormData(form);
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) return;
+    if (button) button.disabled = true;
+    try {
+      const payload = await request(endpoint, { code: values.get("code") });
+      finishAuthentication(payload);
+    } catch (error) {
+      showError(error);
+      if (button) button.disabled = false;
+    }
+  });
+}`,
   );
 }
 
 export function consentPage(): string {
   return page(
     "Authorize",
-    `<h1>Authorize this client</h1>
-    <p><strong data-client>Unknown client</strong> is requesting access.</p>
+    `<h1>Authorize this Application</h1>
+    <p><strong data-application>This Application</strong> is requesting access.</p>
     <p class="muted">Requested scopes: <span data-scopes>none</span></p>
     <form method="post">
       <div class="actions">
@@ -103,9 +163,17 @@ export function consentPage(): string {
       </div>
     </form>`,
     `
-const clientId = query.get("client_id") || "Unknown client";
+const clientId = query.get("client_id");
 const scope = query.get("scope") || "";
-document.querySelector("[data-client]").textContent = clientId;
-document.querySelector("[data-scopes]").textContent = scope || "none";`,
+document.querySelector("[data-scopes]").textContent = scope || "none";
+if (clientId && oauthQuery) {
+  request("/api/auth/oauth2/public-client-prelogin", { client_id: clientId })
+    .then((payload) => {
+      if (payload && typeof payload.client_name === "string") {
+        document.querySelector("[data-application]").textContent = payload.client_name;
+      }
+    })
+    .catch(() => {});
+}`,
   );
 }

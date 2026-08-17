@@ -1,0 +1,139 @@
+---
+import type { TwoFactorState } from "../lib/models.js";
+import { twoFactorPresentation } from "../lib/two-factor.js";
+import Dialog from "./Dialog.astro";
+
+interface Props {
+  idPrefix: string;
+  profile?: boolean;
+  state: TwoFactorState;
+}
+
+const { idPrefix, profile = false, state } = Astro.props;
+const enableDialog = `${idPrefix}-enable`;
+const resetDialog = `${idPrefix}-reset`;
+const regenerateDialog = `${idPrefix}-regenerate`;
+const recoveryDialog = `${idPrefix}-recovery`;
+const current = twoFactorPresentation[state];
+const canEnroll = state === "disabled" || state === "pending";
+const canReset = state !== "disabled";
+const resetTitle = state === "enabled" ? "Disable two-factor" : "Reset authenticator setup";
+const resetDescription = state === "enabled"
+  ? "Future password sign-ins will no longer require an authenticator code."
+  : "Confirm your password to remove the incomplete security state and start again.";
+const resetLabel = state === "enabled" ? "Disable protection" : "Reset setup";
+---
+
+<otakuma-two-factor
+  class:list={["data-surface", "security-card", "two-factor-root", { "mt-6": profile }]}
+  data-two-factor-state={state}
+>
+  <header class="security-card-head">
+    <div>
+      <h2>Two-factor authentication</h2>
+      <p>Use an authenticator code after your password to protect this account.</p>
+    </div>
+    <span
+      class:list={["badge", { neutral: state === "disabled", warning: state === "pending" || state === "inconsistent" }]}
+      data-two-factor-badge
+    >{current.badge}</span>
+  </header>
+
+  <div class="security-card-body">
+    <p class="security-status" data-state={current.tone} data-two-factor-status role="status" aria-live="polite">
+      {current.message}
+    </p>
+    <div class="button-row">
+      <button
+        class="button button-primary"
+        type="button"
+        data-open-dialog={enableDialog}
+        data-two-factor-enable-trigger
+        hidden={!canEnroll}
+      >{state === "pending" ? "Restart setup" : "Set up authenticator"}</button>
+      <button
+        class:list={["button", { "button-danger": state === "enabled" }]}
+        type="button"
+        data-open-dialog={resetDialog}
+        data-two-factor-reset-trigger
+        hidden={!canReset}
+      >{resetLabel}</button>
+    </div>
+
+    <section class="security-setup" data-two-factor-setup hidden aria-labelledby={`${idPrefix}-setup-title`}>
+      <div>
+        <h3 id={`${idPrefix}-setup-title`}>Finish authenticator setup</h3>
+        <p>Add the setup key to your authenticator, then verify one six-digit code.</p>
+      </div>
+      <div class="security-step">
+        <span aria-hidden="true">1</span>
+        <div>
+          <strong>Add the setup key</strong>
+          <p>Open a compatible authenticator app or enter this key manually.</p>
+          <pre class="security-uri"><code data-two-factor-secret></code></pre>
+          <div class="button-row two-factor-setup-actions">
+            <a class="button button-small" data-two-factor-open-app>Open authenticator app</a>
+            <button class="button button-small" type="button" data-two-factor-copy-secret>Copy setup key</button>
+          </div>
+          <p class="security-note" data-two-factor-setup-status role="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="security-step">
+        <span aria-hidden="true">2</span>
+        <form class="security-form" data-two-factor-verify-form>
+          <label class="field">
+            <span>Authenticator code</span>
+            <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+          </label>
+          <button class="button button-primary" type="submit">Verify code</button>
+          <p class="warning-box two-factor-form-error" data-two-factor-error role="alert" hidden></p>
+        </form>
+      </div>
+      <button class="button button-small two-factor-cancel" type="button" data-two-factor-finish-later>Finish later</button>
+    </section>
+
+    <section class="security-recovery" data-two-factor-recovery hidden={state !== "enabled"}>
+      <div>
+        <h3>Recovery codes</h3>
+        <p>Generate a new one-time set if your saved codes are no longer secure.</p>
+      </div>
+      <button class="button button-small" type="button" data-open-dialog={regenerateDialog} data-two-factor-regenerate-trigger>Generate new codes</button>
+    </section>
+    <noscript><p class="warning-box">JavaScript is required to create and verify an authenticator secret without sending it to another service.</p></noscript>
+  </div>
+
+  <Dialog id={enableDialog} title={state === "pending" ? "Restart authenticator setup" : "Set up authenticator"} description="Confirm your password before Otakuma Auth generates a private setup key.">
+    <form data-two-factor-enable-form>
+      <label class="field"><span>Current password</span><input name="password" type="password" autocomplete="current-password" required autofocus /></label>
+      <p class="warning-box two-factor-form-error" data-two-factor-error role="alert" hidden></p>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Generate setup</button></div>
+    </form>
+  </Dialog>
+
+  <Dialog id={resetDialog} title={resetTitle} description={resetDescription}>
+    <form data-two-factor-reset-form>
+      <label class="field"><span>Current password</span><input name="password" type="password" autocomplete="current-password" required autofocus /></label>
+      <p class="warning-box two-factor-form-error" data-two-factor-error role="alert" hidden></p>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class:list={["button", { "button-danger": state === "enabled", "button-primary": state !== "enabled" }]} type="submit">{resetLabel}</button></div>
+    </form>
+  </Dialog>
+
+  <Dialog id={regenerateDialog} title="Generate new recovery codes" description="Your old recovery codes will stop working as soon as the new set is generated.">
+    <form data-two-factor-regenerate-form>
+      <label class="field"><span>Current password</span><input name="password" type="password" autocomplete="current-password" required autofocus /></label>
+      <p class="warning-box two-factor-form-error" data-two-factor-error role="alert" hidden></p>
+      <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Generate codes</button></div>
+    </form>
+  </Dialog>
+
+  <Dialog id={recoveryDialog} title="Save your recovery codes" description="Each code works once. This set disappears after you confirm it is saved.">
+    <div class="dialog-body">
+      <p class="security-dialog-copy">Store these codes in a password manager or another secure place before continuing.</p>
+      <ul class="security-dialog-codes" data-two-factor-recovery-codes></ul>
+      <p class="security-note" data-two-factor-recovery-status role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button class="button" type="button" data-two-factor-copy-recovery>Copy codes</button><button class="button button-primary" type="button" data-two-factor-acknowledge>I saved these codes</button></div>
+    </div>
+  </Dialog>
+</otakuma-two-factor>
+
+<script src="../scripts/two-factor.ts"></script>

@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
@@ -12,24 +10,7 @@ import {
 } from "../src/dashboard/dashboard.auth.js";
 import { digest } from "../src/dashboard/dashboard.crypto.js";
 import { DashboardError } from "../src/dashboard/dashboard.error.js";
-
-const migrationPaths = [
-  "0001_better_auth.sql",
-  "0002_auth_dashboard.sql",
-  "0003_better_auth_admin.sql",
-];
-
-async function applyMigrations(database: D1Database): Promise<void> {
-  for (const filename of migrationPaths) {
-    const sql = await readFile(
-      resolve(import.meta.dirname, "../migrations", filename),
-      "utf8",
-    );
-    for (const statement of sql.split(";").map((value) => value.trim())) {
-      if (statement) await database.prepare(statement).run();
-    }
-  }
-}
+import { applyAuthMigrations } from "./auth-database.js";
 
 function sessionCookie(response: Response): string {
   const header = response.headers.get("set-cookie");
@@ -49,12 +30,20 @@ async function bootstrapAndSignIn(bindings: AuthBindings): Promise<string> {
     password: "correct horse battery staple",
     token,
   });
+  return signIn(bindings, "admin@example.com", "correct horse battery staple");
+}
+
+async function signIn(
+  bindings: AuthBindings,
+  email: string,
+  password: string,
+): Promise<string> {
   const auth = await createAuth(bindings);
   const signIn = await auth.handler(
     new Request("http://localhost:8787/api/auth/sign-in/email", {
       body: JSON.stringify({
-        email: "admin@example.com",
-        password: "correct horse battery staple",
+        email,
+        password,
       }),
       headers: {
         "content-type": "application/json",
@@ -88,7 +77,7 @@ describe("auth dashboard integration", () => {
       }),
     );
     bindings = await miniflare.getBindings<AuthBindings>();
-    await applyMigrations(bindings.AUTH_DB);
+    await applyAuthMigrations(bindings.AUTH_DB);
   });
 
   afterEach(async () => {
@@ -170,8 +159,8 @@ describe("auth dashboard integration", () => {
     ).toBe(400);
   });
 
-  it("guards dashboard routes and creates users through Better Auth", async () => {
-    const cookie = await bootstrapAndSignIn(bindings);
+  it("separates signed-in account identity from management access", async () => {
+    const adminCookie = await bootstrapAndSignIn(bindings);
     const app = createApp();
     const unauthorized = await app.request(
       "/api/dashboard/users",
@@ -179,16 +168,44 @@ describe("auth dashboard integration", () => {
       bindings,
     );
     expect(unauthorized.status).toBe(401);
+    const signedOut = await app.request(
+      "/api/dashboard/session",
+      undefined,
+      bindings,
+    );
+    expect(signedOut.status).toBe(401);
 
+    const adminSession = await app.request(
+      "/api/dashboard/session",
+      { headers: { cookie: adminCookie } },
+      bindings,
+    );
+    expect(adminSession.status).toBe(200);
+    expect(await adminSession.json()).toMatchObject({
+      canManage: true,
+      user: {
+        createdAt: expect.any(String),
+        email: "admin@example.com",
+        emailVerified: true,
+        image: null,
+        name: "Admin",
+        twoFactorState: "disabled",
+      },
+    });
+
+    const password = "another secure password";
     const created = await app.request(
       "/api/dashboard/users",
       {
         body: JSON.stringify({
-          email: "user@example.com",
-          name: "User",
-          password: "another secure password",
+          email: "member@example.com",
+          name: "Member",
+          password,
         }),
-        headers: { cookie, "content-type": "application/json" },
+        headers: {
+          cookie: adminCookie,
+          "content-type": "application/json",
+        },
         method: "POST",
       },
       bindings,
@@ -196,16 +213,39 @@ describe("auth dashboard integration", () => {
     expect(created.status).toBe(201);
     const listed = await app.request(
       "/api/dashboard/users",
-      { headers: { cookie } },
+      { headers: { cookie: adminCookie } },
       bindings,
     );
     expect(listed.status).toBe(200);
     const body: unknown = await listed.json();
     expect(body).toMatchObject({
       users: expect.arrayContaining([
-        expect.objectContaining({ email: "user@example.com" }),
+        expect.objectContaining({ email: "member@example.com" }),
       ]),
     });
+
+    const memberCookie = await signIn(bindings, "member@example.com", password);
+    const memberSession = await app.request(
+      "/api/dashboard/session",
+      { headers: { cookie: memberCookie } },
+      bindings,
+    );
+    expect(memberSession.status).toBe(200);
+    expect(await memberSession.json()).toMatchObject({
+      canManage: false,
+      user: {
+        email: "member@example.com",
+        name: "Member",
+        twoFactorState: "disabled",
+      },
+    });
+
+    const forbidden = await app.request(
+      "/api/dashboard/users",
+      { headers: { cookie: memberCookie } },
+      bindings,
+    );
+    expect(forbidden.status).toBe(403);
   });
 
   it("scopes the complete Application lifecycle to dashboard API links", async () => {
@@ -268,7 +308,15 @@ describe("auth dashboard integration", () => {
       throw new Error("The Application response did not match its contract.");
     }
     const clientId = applicationValue.application.clientId;
-    expect(applicationValue.credential).toMatch(/^chikara_cs_/);
+    expect(clientId).toMatch(/^otakuma_[\w-]{32}$/);
+    expect(applicationValue.credential).toMatch(/^otakuma_cs_/);
+    expect(
+      await bindings.AUTH_DB.prepare(
+        "SELECT referenceId FROM oauthClient WHERE clientId = ?",
+      )
+        .bind(clientId)
+        .first<{ referenceId: string }>(),
+    ).toEqual({ referenceId: "otakuma:auth-dashboard" });
 
     const listed = await app.request(
       "/api/dashboard/applications",
@@ -307,7 +355,7 @@ describe("auth dashboard integration", () => {
     expect(rotated.status).toBe(200);
     const rotatedValue: unknown = await rotated.json();
     expect(rotatedValue).toMatchObject({
-      credential: expect.stringMatching(/^chikara_cs_/),
+      credential: expect.stringMatching(/^otakuma_cs_/),
     });
 
     const removed = await app.request(

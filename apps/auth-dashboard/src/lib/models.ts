@@ -1,8 +1,11 @@
 export type {
+  AccountProfile,
+  AccountSession,
   DashboardApi as Api,
   DashboardApplication as Application,
   DashboardUser as User,
   Superuser,
+  TwoFactorState,
 } from "@chikara/auth/dashboard-contract";
 
 export interface OauthEndpoints {

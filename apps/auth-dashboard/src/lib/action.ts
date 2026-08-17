@@ -1,3 +1,6 @@
+import { isTwoFactorRedirect } from "./action-outcome.js";
+import { safeLocalPath } from "./navigation.js";
+
 export type ActionForwarder = (
   request: Request,
   pathname: string,
@@ -24,8 +27,7 @@ function formBody(form: FormData): Record<string, string | boolean | string[]> {
 }
 
 function returnLocation(form: FormData): string {
-  const value = form.get("_returnTo");
-  return typeof value === "string" && value.startsWith("/") ? value : "/apis";
+  return safeLocalPath(form.get("_returnTo"), "/apis");
 }
 
 function oneTimePage(value: string): Response {
@@ -54,6 +56,14 @@ function credentialFrom(value: unknown): string | undefined {
   }
   if (!("credential" in value)) return undefined;
   return typeof value.credential === "string" ? value.credential : undefined;
+}
+
+function redirectWithCookies(response: Response, location: string): Response {
+  const redirectHeaders = new Headers({ location });
+  for (const cookie of response.headers.getSetCookie()) {
+    redirectHeaders.append("set-cookie", cookie);
+  }
+  return new Response(null, { headers: redirectHeaders, status: 303 });
 }
 
 export interface ActionRequest {
@@ -95,11 +105,14 @@ export async function handleAction(input: ActionRequest): Promise<Response> {
   const credential = credentialFrom(value);
   if (credential) return oneTimePage(credential);
 
-  const redirectHeaders = new Headers({
-    location: new URL(returnLocation(form), input.request.url).toString(),
-  });
-  for (const cookie of response.headers.getSetCookie()) {
-    redirectHeaders.append("set-cookie", cookie);
+  if (isTwoFactorRedirect(value)) {
+    const challengeUrl = new URL("/two-factor", input.request.url);
+    challengeUrl.searchParams.set("returnTo", returnLocation(form));
+    return redirectWithCookies(response, challengeUrl.toString());
   }
-  return new Response(null, { headers: redirectHeaders, status: 303 });
+
+  return redirectWithCookies(
+    response,
+    new URL(returnLocation(form), input.request.url).toString(),
+  );
 }

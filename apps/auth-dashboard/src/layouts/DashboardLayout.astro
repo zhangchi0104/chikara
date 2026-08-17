@@ -1,21 +1,18 @@
 ---
 import type { Superuser } from "../lib/models.js";
+import { managementRoutes, type ManagementPageId } from "../lib/navigation.js";
 import Icon from "../components/Icon.astro";
+import ProfileMenu from "../components/ProfileMenu.astro";
 import "../styles/global.css";
 
 interface Props {
-  active: "apis" | "applications" | "users";
+  active: ManagementPageId;
   description: string;
   title: string;
   user: Superuser;
 }
 
 const { active, description, title, user } = Astro.props;
-const nav = [
-  { href: "/apis", icon: "api", id: "apis", label: "APIs" },
-  { href: "/applications", icon: "application", id: "applications", label: "Applications" },
-  { href: "/users", icon: "user", id: "users", label: "Users" },
-] as const;
 ---
 
 <!doctype html>
@@ -47,7 +44,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         </div>
         <nav aria-label="Primary">
           <p class="nav-label">Manage</p>
-          {nav.map((item) => (
+          {managementRoutes.map((item) => (
             <a href={item.href} aria-current={active === item.id ? "page" : undefined}>
               <Icon name={item.icon} />
               <span>{item.label}</span>
@@ -55,14 +52,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           ))}
         </nav>
         <div class="sidebar-foot">
-          <div class="profile-compact">
-            <span class="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
-            <span><strong>{user.name}</strong><small>Superuser</small></span>
-          </div>
-          <form action="/actions/auth/sign-out" method="post" data-enhance data-next="/sign-in">
-            <input type="hidden" name="_returnTo" value="/sign-in" />
-            <button class="icon-button inverse" type="submit" aria-label="Sign out"><Icon name="logout" /></button>
-          </form>
+          <ProfileMenu id="sidebar-account-menu" label="Administrator" tone="dark" user={user} />
         </div>
       </aside>
       <main class="workspace">
@@ -71,13 +61,18 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
             <h1>{title}</h1>
             <p>{description}</p>
           </div>
-          <slot name="actions" />
+          <div class="flex items-center gap-2.5">
+            <slot name="actions" />
+            <div class="hidden mobile:block">
+              <ProfileMenu compact id="mobile-account-menu" label="Administrator" user={user} />
+            </div>
+          </div>
         </header>
         <slot />
       </main>
     </div>
     <nav class="mobile-nav" aria-label="Primary mobile">
-      {nav.map((item) => (
+      {managementRoutes.map((item) => (
         <a href={item.href} aria-current={active === item.id ? "page" : undefined}>
           <Icon name={item.icon} />
           <span>{item.label}</span>
@@ -86,5 +81,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </nav>
     <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
     <script src="../scripts/dashboard.ts"></script>
+    <script src="../scripts/profile-menu.ts"></script>
   </body>
 </html>

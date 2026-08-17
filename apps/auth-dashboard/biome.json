@@ -2,6 +2,11 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "root": false,
   "extends": ["@repo/biome-config/biome.json"],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
     "includes": [
       "src/**/*.ts",

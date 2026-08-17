@@ -1,4 +1,6 @@
+import { enhancedActionLocation } from "../lib/action-outcome.js";
 import { createAuthorizationTestUrl } from "../lib/oauth-test.js";
+import "./dialog.js";
 
 function showToast(
   message: string,
@@ -12,17 +14,6 @@ function showToast(
   window.setTimeout(() => {
     toast.hidden = true;
   }, 4200);
-}
-
-function openDialog(id: string): void {
-  const dialog = document.getElementById(id);
-  if (dialog instanceof HTMLDialogElement) dialog.showModal();
-}
-
-function closeDialog(button: Element): void {
-  const dialog = button.closest("dialog");
-  if (dialog instanceof HTMLDialogElement && !dialog.dataset.locked)
-    dialog.close();
 }
 
 async function apiRequest(
@@ -131,7 +122,6 @@ async function startAuthTest(button: HTMLButtonElement): Promise<void> {
 document.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
-  const opener = target.closest<HTMLElement>("[data-open-dialog]");
   const userEditor = target.closest<HTMLElement>("[data-edit-user]");
   if (
     userEditor?.dataset.userId &&
@@ -153,10 +143,6 @@ document.addEventListener("click", async (event) => {
       email.value = userEditor.dataset.userEmail;
     }
   }
-  if (opener?.dataset.openDialog) openDialog(opener.dataset.openDialog);
-  const closer = target.closest("[data-close-dialog]");
-  if (closer) closeDialog(closer);
-
   const copy = target.closest<HTMLElement>("[data-copy]");
   if (copy) await copyToClipboard(copy);
 
@@ -207,7 +193,14 @@ document.addEventListener("submit", async (event) => {
     const data = await apiRequest(form.action, "POST", new FormData(form));
     if (typeof data.credential === "string" && data.credential)
       showCredential(data.credential);
-    else window.location.assign(form.dataset.next ?? window.location.pathname);
+    else
+      window.location.assign(
+        enhancedActionLocation(
+          data,
+          form.dataset.next,
+          window.location.pathname,
+        ),
+      );
   } catch (error) {
     showToast(
       error instanceof Error ? error.message : "Request failed.",
@@ -215,12 +208,6 @@ document.addEventListener("submit", async (event) => {
     );
     if (submit) submit.disabled = false;
   }
-});
-
-document.addEventListener("cancel", (event) => {
-  const dialog = event.target;
-  if (dialog instanceof HTMLDialogElement && dialog.dataset.locked)
-    event.preventDefault();
 });
 
 document.addEventListener("close", (event) => {

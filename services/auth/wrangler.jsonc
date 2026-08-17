@@ -19,5 +19,19 @@
       "preview_database_id": "chikara-auth-local",
       "migrations_dir": "migrations"
     }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TWO_FACTOR_COORDINATOR",
+        "class_name": "TwoFactorCoordinator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TwoFactorCoordinator"]
+    }
   ]
 }

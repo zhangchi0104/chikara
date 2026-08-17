@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { createAuth } from "../auth.js";
 import type { AuthBindings } from "../configs/auth.config.js";
-import { DASHBOARD_CLIENT_REFERENCE } from "../constants/better-auth.constant .js";
+import { DASHBOARD_CLIENT_REFERENCES } from "../constants/oauth-identifiers.js";
 import {
   authEffect,
   constrainedStorageEffect,
@@ -28,6 +28,7 @@ interface ApplicationRow
 
 interface ManagedApplicationRow extends ApplicationRow {
   readonly public: number;
+  readonly referenceId: string;
 }
 
 function parseStringList(value: string): ReadonlyArray<string> {
@@ -72,10 +73,10 @@ export function listApplications(database: D1Database) {
          FROM oauthClient c
          JOIN dashboardApplicationApi link ON link.clientId = c.clientId
          JOIN authApi api ON api.id = link.apiId
-         WHERE c.referenceId = ?
+         WHERE c.referenceId IN (?, ?)
          ORDER BY c.createdAt DESC`,
       )
-      .bind(DASHBOARD_CLIENT_REFERENCE)
+      .bind(...DASHBOARD_CLIENT_REFERENCES)
       .all<ApplicationRow>();
     return result.results.map(toApplication);
   });
@@ -97,13 +98,14 @@ function requireApplication(database: D1Database, clientId: string) {
     const row = await database
       .prepare(
         `SELECT c.clientId, c.name, c.redirectUris, c.type, c.disabled,
-         c.public, c.createdAt, c.updatedAt, link.apiId, api.name AS apiName
+         c.public, c.referenceId, c.createdAt, c.updatedAt,
+         link.apiId, api.name AS apiName
          FROM oauthClient c
          JOIN dashboardApplicationApi link ON link.clientId = c.clientId
          JOIN authApi api ON api.id = link.apiId
-         WHERE c.clientId = ? AND c.referenceId = ?`,
+         WHERE c.clientId = ? AND c.referenceId IN (?, ?)`,
       )
-      .bind(clientId, DASHBOARD_CLIENT_REFERENCE)
+      .bind(clientId, ...DASHBOARD_CLIENT_REFERENCES)
       .first<ManagedApplicationRow>();
     if (!row) throw new DashboardError(404, "Application not found.");
     return row;
@@ -217,14 +219,16 @@ export function updateApplication(
   input: UpdateApplicationInput,
 ) {
   return Effect.gen(function* () {
-    yield* requireApplication(bindings.AUTH_DB, clientId);
+    const application = yield* requireApplication(bindings.AUTH_DB, clientId);
     yield* requireApi(bindings.AUTH_DB, input.apiId);
     yield* authEffect(
       "update Application",
       422,
       "The Application configuration is invalid.",
       async () => {
-        const auth = await createAuth(bindings);
+        const auth = await createAuth(bindings, {
+          clientReference: application.referenceId,
+        });
         await auth.api.updateOAuthClient({
           headers,
           body: {
@@ -248,7 +252,7 @@ export function updateApplication(
             input.disabled ? 1 : 0,
             Date.now(),
             clientId,
-            DASHBOARD_CLIENT_REFERENCE,
+            application.referenceId,
           ),
           bindings.AUTH_DB.prepare(
             "UPDATE dashboardApplicationApi SET apiId = ? WHERE clientId = ?",
@@ -283,7 +287,9 @@ export function rotateApplicationCredential(
       404,
       "Application not found.",
       async () => {
-        const auth = await createAuth(bindings);
+        const auth = await createAuth(bindings, {
+          clientReference: application.referenceId,
+        });
         return auth.api.rotateClientSecret({
           headers,
           body: { client_id: clientId },
@@ -305,13 +311,15 @@ export function removeApplication(
   clientId: string,
 ) {
   return requireApplication(bindings.AUTH_DB, clientId).pipe(
-    Effect.flatMap(() =>
+    Effect.flatMap((application) =>
       authEffect(
         "remove Application",
         404,
         "Application not found.",
         async () => {
-          const auth = await createAuth(bindings);
+          const auth = await createAuth(bindings, {
+            clientReference: application.referenceId,
+          });
           await auth.api.deleteOAuthClient({
             headers,
             body: { client_id: clientId },

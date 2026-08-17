@@ -1,0 +1,25 @@
+---
+import AuthLayout from "../layouts/AuthLayout.astro";
+import { safeLocalPath } from "../lib/navigation.js";
+
+const requestedReturnTo = Astro.url.searchParams.get("returnTo");
+const returnTo = safeLocalPath(requestedReturnTo, "/");
+---
+
+<AuthLayout title="Verify your sign-in" description="Two-factor authentication is enabled for this account.">
+  <div class="auth-form">
+    <p class="form-note">Enter the six-digit code from your authenticator app. The code expires quickly and can only be used once.</p>
+    <form action="/actions/auth/two-factor/verify-totp" method="post" data-enhance data-next={returnTo}>
+      <input type="hidden" name="_returnTo" value={returnTo} />
+      <label class="field"><span>Authenticator code</span><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus /></label>
+      <button class="button button-primary" type="submit">Verify and continue</button>
+    </form>
+    <div class="auth-divider" aria-hidden="true"><span>or</span></div>
+    <form action="/actions/auth/two-factor/verify-backup-code" method="post" data-enhance data-next={returnTo}>
+      <input type="hidden" name="_returnTo" value={returnTo} />
+      <label class="field"><span>Recovery code</span><input name="code" autocomplete="off" spellcheck="false" required /></label>
+      <button class="button" type="submit">Use a recovery code</button>
+    </form>
+    <p class="form-note">If you no longer have either method, ask the Otakuma Auth administrator to help secure the account again.</p>
+  </div>
+</AuthLayout>

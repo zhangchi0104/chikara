@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { handleAction } from "../src/lib/action.js";
+import { enhancedActionLocation } from "../src/lib/action-outcome.js";
 
 describe("dashboard server actions", () => {
+  it("routes enhanced sign-ins through the two-factor challenge", () => {
+    expect(
+      enhancedActionLocation(
+        { twoFactorMethods: ["totp"], twoFactorRedirect: true },
+        "/profile?source=sign-in",
+        "/sign-in",
+      ),
+    ).toBe(
+      "/two-factor?returnTo=%2Fprofile%3Fsource%3Dsign-in",
+    );
+    expect(
+      enhancedActionLocation({ ok: true }, "/profile", "/sign-in"),
+    ).toBe("/profile");
+    expect(
+      enhancedActionLocation({ ok: true }, "//evil.example", "/sign-in"),
+    ).toBe("/sign-in");
+  });
+
   it("translates enhanced forms into typed management requests", async () => {
     let forwardedMethod = "";
     let forwardedPath = "";
@@ -67,6 +86,47 @@ describe("dashboard server actions", () => {
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost/sign-in");
     expect(response.headers.get("set-cookie")).toContain("session=updated");
+  });
+
+  it("rejects protocol-relative return locations", async () => {
+    const response = await handleAction({
+      forward: () => Promise.resolve(Response.json({ ok: true })),
+      path: "sign-out",
+      request: new Request("http://localhost/actions/auth/sign-out", {
+        body: new URLSearchParams({ _returnTo: "//evil.example" }),
+        method: "POST",
+      }),
+      scope: "auth",
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("http://localhost/apis");
+  });
+
+  it("hands a two-factor challenge to the verification page", async () => {
+    const response = await handleAction({
+      forward: () =>
+        Promise.resolve(
+          Response.json(
+            { twoFactorMethods: ["totp"], twoFactorRedirect: true },
+            { headers: { "set-cookie": "two-factor=challenge; HttpOnly" } },
+          ),
+        ),
+      path: "sign-in/email",
+      request: new Request("http://localhost/actions/auth/sign-in/email", {
+        body: new URLSearchParams({ _returnTo: "/apis" }),
+        method: "POST",
+      }),
+      scope: "auth",
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/two-factor?returnTo=%2Fapis",
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      "two-factor=challenge",
+    );
   });
 
   it("renders a no-store one-time response for a new credential", async () => {

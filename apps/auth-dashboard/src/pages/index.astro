@@ -1,9 +1,11 @@
 ---
-import { getBootstrapStatus, getDashboardSession } from "../lib/auth.js";
+import { getAccountSession, getBootstrapStatus } from "../lib/auth.js";
+import { authenticatedLanding } from "../lib/navigation.js";
 
 const status = await getBootstrapStatus(Astro.request);
 if (!status.data) return Astro.redirect("/bootstrap");
-const session = await getDashboardSession(Astro.request);
+const session = await getAccountSession(Astro.request);
 if (!session.data) return Astro.redirect("/sign-in");
-return Astro.redirect("/apis");
+const landing = authenticatedLanding(session.data);
+return Astro.redirect(landing);
 ---

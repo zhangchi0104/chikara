@@ -1,0 +1,324 @@
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px;
+}
+
+.security-card {
+  min-width: 0;
+}
+
+.two-factor-root {
+  display: block;
+}
+
+.security-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.security-card-head h2 {
+  margin: 4px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.025em;
+}
+
+.two-factor-root .security-card-head h2 {
+  margin-top: 0;
+}
+
+.security-card-head p:last-child {
+  max-width: 48ch;
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+}
+
+.security-eyebrow {
+  margin: 0;
+  color: var(--signal-hover);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.security-card-body {
+  display: grid;
+  gap: 17px;
+  padding: 22px 24px 24px;
+}
+
+.security-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 24px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.security-status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  content: "";
+}
+
+.security-status[data-state="ready"]::before {
+  background: var(--success);
+}
+
+.security-status[data-state="warning"]::before {
+  background: var(--signal);
+}
+
+.security-status[data-state="error"]::before {
+  background: var(--danger);
+}
+
+.security-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.security-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fafbfc;
+}
+
+.security-list-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.security-list-copy strong,
+.security-list-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.security-list-copy strong {
+  font-size: 14px;
+}
+
+.security-list-copy small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.security-list-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.security-empty {
+  margin: 0;
+  padding: 14px;
+  border-radius: 9px;
+  background: #f3f5f8;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.security-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.security-setup {
+  display: grid;
+  gap: 15px;
+  padding: 16px;
+  border: 1px solid #f4c7b5;
+  border-radius: 10px;
+  background: var(--signal-soft);
+}
+
+.security-setup h3,
+.security-recovery h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.security-setup p,
+.security-recovery p {
+  margin: 5px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.security-step {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.security-step > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--signal);
+  color: white;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.security-uri {
+  max-height: 88px;
+  margin: 9px 0 0;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: #111827;
+  color: #f7f8fb;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.security-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.security-form .field {
+  flex: 1;
+}
+
+.security-form .field input {
+  letter-spacing: 0.16em;
+  text-align: center;
+}
+
+.two-factor-form-error {
+  width: 100%;
+  margin: 0;
+}
+
+.two-factor-setup-actions {
+  margin-top: 10px;
+}
+
+.two-factor-setup-actions .button {
+  min-height: 40px;
+}
+
+.two-factor-cancel {
+  justify-self: start;
+}
+
+.security-recovery {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.security-code-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.security-code-list li {
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #f3f5f8;
+  color: var(--ink);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.security-dialog-copy {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.security-dialog-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 9px;
+  background: #111827;
+  color: #f7f8fb;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  list-style: none;
+}
+
+.security-dialog-codes li {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.two-factor-root [hidden] {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .security-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .security-card-head,
+  .security-card-body {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .security-card-head {
+    flex-direction: column;
+  }
+
+  .security-list-item,
+  .security-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .security-list-actions {
+    justify-content: flex-start;
+  }
+
+  .security-dialog-codes {
+    grid-template-columns: 1fr;
+  }
+
+  .two-factor-root .button-small {
+    min-height: 44px;
+  }
+}

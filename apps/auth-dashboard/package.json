@@ -12,8 +12,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@chikara/auth": "workspace:*",
     "@astrojs/cloudflare": "catalog:",
+    "@chikara/auth": "workspace:*",
+    "@simplewebauthn/browser": "13.3.0",
     "astro": "catalog:"
   },
   "devDependencies": {
@@ -21,7 +22,9 @@
     "@biomejs/biome": "catalog:",
     "@repo/biome-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "catalog:",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.2",
     "vitest": "catalog:",
     "wrangler": "catalog:"

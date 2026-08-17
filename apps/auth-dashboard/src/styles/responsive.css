@@ -28,7 +28,8 @@
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
     border-top: 1px solid #313d52;
     background: var(--nav);
     color: #aeb8c9;

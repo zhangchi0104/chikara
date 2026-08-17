@@ -1,10 +1,11 @@
 import { hashPassword } from "better-auth/crypto";
 import { createAuth } from "../auth.js";
 import type { AuthBindings } from "../configs/auth.config.js";
+import { readTwoFactorState } from "../two-factor.state.js";
 import { isSuperuserId } from "./dashboard.access.js";
 import { digest } from "./dashboard.crypto.js";
 import { DashboardError } from "./dashboard.error.js";
-import type { Superuser } from "./dashboard.models.js";
+import type { AccountSession, Superuser } from "./dashboard.models.js";
 
 export const BOOTSTRAP_KEY = "dashboard:bootstrap";
 
@@ -12,16 +13,14 @@ interface BootstrapRecord {
   readonly digest: string;
 }
 
-interface SessionResult {
-  readonly user: {
-    readonly email: string;
-    readonly id: string;
-    readonly name: string;
-  };
-}
-
 function isBootstrapRecord(value: object): value is BootstrapRecord {
   return "digest" in value && typeof value.digest === "string";
+}
+
+function serializedDate(value: Date | number | string): string {
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 export async function isBootstrapped(database: D1Database): Promise<boolean> {
@@ -31,19 +30,42 @@ export async function isBootstrapped(database: D1Database): Promise<boolean> {
   return row !== null;
 }
 
+export async function getAccountSession(
+  request: Request,
+  bindings: AuthBindings,
+): Promise<AccountSession> {
+  const session = await (await createAuth(bindings)).api.getSession({
+    headers: request.headers,
+    query: { disableCookieCache: true, disableRefresh: true },
+  });
+  if (!session) throw new DashboardError(401, "Sign in to continue.");
+  const [canManage, twoFactorState] = await Promise.all([
+    isSuperuserId(bindings.AUTH_DB, session.user.id),
+    readTwoFactorState(bindings.AUTH_DB, session.user.id),
+  ]);
+  return {
+    canManage,
+    user: {
+      createdAt: serializedDate(session.user.createdAt),
+      email: session.user.email,
+      emailVerified: session.user.emailVerified,
+      id: session.user.id,
+      image: session.user.image ?? null,
+      name: session.user.name,
+      twoFactorState,
+    },
+  };
+}
+
 export async function requireSuperuser(
   request: Request,
   bindings: AuthBindings,
 ): Promise<Superuser> {
-  const session = await (await createAuth(bindings)).api.getSession({
-    headers: request.headers,
-  });
-  if (!session) throw new DashboardError(401, "Sign in to continue.");
-  const current = session as SessionResult;
-  if (!(await isSuperuserId(bindings.AUTH_DB, current.user.id))) {
+  const account = await getAccountSession(request, bindings);
+  if (!account.canManage) {
     throw new DashboardError(403, "Superuser access is required.");
   }
-  return current.user;
+  return account.user;
 }
 
 export interface BootstrapInput {

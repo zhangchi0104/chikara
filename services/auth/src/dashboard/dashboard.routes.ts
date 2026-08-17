@@ -16,6 +16,7 @@ import {
 } from "./dashboard.application-store.js";
 import {
   bootstrapSuperuser,
+  getAccountSession,
   isBootstrapped,
   requireSuperuser,
 } from "./dashboard.auth.js";
@@ -85,6 +86,13 @@ export function createDashboardApp(): Hono<{ Bindings: AuthBindings }> {
     return context.json({ user }, 201);
   });
 
+  app.get("/session", async (context) => {
+    const account = await Effect.runPromise(
+      promiseEffect(() => getAccountSession(context.req.raw, context.env)),
+    );
+    return context.json(account);
+  });
+
   app.use("/*", async (context, next) => {
     const user = await Effect.runPromise(
       promiseEffect(() => requireSuperuser(context.req.raw, context.env)),
@@ -93,7 +101,6 @@ export function createDashboardApp(): Hono<{ Bindings: AuthBindings }> {
     await next();
   });
 
-  app.get("/me", (context) => context.json({ user: context.get("superuser") }));
   app.get("/users", (context) =>
     Effect.runPromise(listUsers(context.env.AUTH_DB)).then((users) =>
       context.json({ users }),

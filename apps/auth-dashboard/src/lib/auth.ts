@@ -1,17 +1,17 @@
 import { env } from "cloudflare:workers";
 import {
+  accountSession,
   apis,
   applications,
   bootstrapStatus,
   oauthEndpoints,
-  session,
   users,
 } from "./contract.js";
 import type {
+  AccountSession,
   Api,
   Application,
   OauthEndpoints,
-  Superuser,
   User,
 } from "./models.js";
 
@@ -46,8 +46,8 @@ async function managementGet<T>(
 export const getBootstrapStatus = (request: Request) =>
   managementGet(request, "/status", bootstrapStatus);
 
-export const getDashboardSession = (request: Request) =>
-  managementGet<Superuser>(request, "/me", session);
+export const getAccountSession = (request: Request) =>
+  managementGet<AccountSession>(request, "/session", accountSession);
 
 export const getUsers = (request: Request) =>
   managementGet<ReadonlyArray<User>>(request, "/users", users);

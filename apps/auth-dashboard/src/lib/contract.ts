@@ -1,10 +1,12 @@
 import type {
+  AccountProfile,
+  AccountSession,
   Api,
   Application,
   OauthEndpoints,
-  Superuser,
   User,
 } from "./models.js";
+import { twoFactorState } from "./two-factor.js";
 
 type RecordValue = Record<string, unknown>;
 
@@ -26,6 +28,10 @@ function boolean(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }
 
+function nullableString(value: unknown): string | null | undefined {
+  return value === null ? null : string(value);
+}
+
 function stringArray(value: unknown): ReadonlyArray<string> | undefined {
   return Array.isArray(value) && value.every((item) => typeof item === "string")
     ? value
@@ -43,12 +49,42 @@ function array<T>(
     : undefined;
 }
 
-export function superuser(value: unknown): Superuser | undefined {
+function accountProfile(value: unknown): AccountProfile | undefined {
   const item = record(value);
-  const id = string(item?.id);
-  const name = string(item?.name);
+  const createdAt = string(item?.createdAt);
   const email = string(item?.email);
-  return id && name && email ? { email, id, name } : undefined;
+  const emailVerified = boolean(item?.emailVerified);
+  const id = string(item?.id);
+  const image = nullableString(item?.image);
+  const name = string(item?.name);
+  const state = twoFactorState(item?.twoFactorState);
+  if (
+    !createdAt ||
+    !email ||
+    emailVerified === undefined ||
+    !id ||
+    image === undefined ||
+    !name ||
+    !state
+  ) {
+    return undefined;
+  }
+  return {
+    createdAt,
+    email,
+    emailVerified,
+    id,
+    image,
+    name,
+    twoFactorState: state,
+  };
+}
+
+export function accountSession(value: unknown): AccountSession | undefined {
+  const item = record(value);
+  const canManage = boolean(item?.canManage);
+  const user = accountProfile(item?.user);
+  return canManage === undefined || !user ? undefined : { canManage, user };
 }
 
 function user(value: unknown): User | undefined {
@@ -166,8 +202,4 @@ export function oauthEndpoints(value: unknown): OauthEndpoints | undefined {
   return authorizationUrl && tokenUrl
     ? { authorizationUrl, tokenUrl }
     : undefined;
-}
-
-export function session(value: unknown): Superuser | undefined {
-  return superuser(record(value)?.user);
 }

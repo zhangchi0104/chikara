@@ -2,10 +2,20 @@ import { Effect } from "effect";
 import { Hono } from "hono";
 import { createAuth } from "./auth.js";
 import type { AuthBindings } from "./configs/auth.config.js";
-import { AUTH_BASE_PATH } from "./constants/better-auth.constant .js";
+import { AUTH_BASE_PATH } from "./constants/better-auth.constant.js";
 import { validateTokenAudience } from "./dashboard/dashboard.access.js";
 import { createDashboardApp } from "./dashboard/dashboard.routes.js";
-import { consentPage, signInPage, signUpPage } from "./pages.js";
+import { consentPage, signInPage, signUpPage, twoFactorPage } from "./pages.js";
+import {
+  handleSignInPageAction,
+  handleTwoFactorPageAction,
+  redirectWithCookies,
+  signedOAuthQuery,
+} from "./public-page-action.js";
+import {
+  coordinatesTwoFactorMutation,
+  recoverableSignInUserId,
+} from "./two-factor.guard.js";
 
 type AuthHandler = (
   request: Request,
@@ -15,7 +25,25 @@ type AuthHandler = (
 const defaultAuthHandler: AuthHandler = async (request, bindings) => {
   const audienceError = await validateTokenAudience(request, bindings.AUTH_DB);
   if (audienceError) return audienceError;
-  return (await createAuth(bindings)).handler(request);
+  const recoveryUserId = await recoverableSignInUserId(
+    request,
+    bindings.AUTH_DB,
+  );
+  if (recoveryUserId) {
+    return bindings.TWO_FACTOR_COORDINATOR.getByName(recoveryUserId).fetch(
+      request,
+    );
+  }
+  const auth = await createAuth(bindings);
+  if (!coordinatesTwoFactorMutation(request)) return auth.handler(request);
+  const session = await auth.api.getSession({
+    headers: request.headers,
+    query: { disableCookieCache: true, disableRefresh: true },
+  });
+  if (!session) return auth.handler(request);
+  return bindings.TWO_FACTOR_COORDINATOR.getByName(session.user.id).fetch(
+    request,
+  );
 };
 
 const runAuthHandler = Effect.fnUntraced(function* (
@@ -27,21 +55,6 @@ const runAuthHandler = Effect.fnUntraced(function* (
     Promise.resolve(handler(request, bindings)),
   );
 });
-
-function signedOAuthQuery(searchParams: URLSearchParams): string | undefined {
-  const signedParameterNames = new Set(searchParams.getAll("ba_param"));
-  if (!searchParams.has("sig") || signedParameterNames.size === 0) {
-    return undefined;
-  }
-
-  const signedQuery = new URLSearchParams();
-  for (const [key, value] of searchParams.entries()) {
-    if (key === "sig" || key === "ba_param" || signedParameterNames.has(key)) {
-      signedQuery.append(key, value);
-    }
-  }
-  return signedQuery.toString();
-}
 
 function redirectUrl(payload: unknown): string | undefined {
   if (typeof payload !== "object" || payload === null || !("url" in payload)) {
@@ -70,7 +83,20 @@ export function createApp(
   app.get("/health", (context) => context.json({ status: "ok" }));
 
   app.get("/sign-in", (context) => context.html(signInPage()));
+  app.post("/sign-in", (context) =>
+    handleSignInPageAction({
+      forward: (request) => handleAuth(request, context.env),
+      request: context.req.raw,
+    }),
+  );
   app.get("/sign-up", (context) => context.html(signUpPage()));
+  app.get("/two-factor", (context) => context.html(twoFactorPage()));
+  app.post("/two-factor", (context) =>
+    handleTwoFactorPageAction({
+      forward: (request) => handleAuth(request, context.env),
+      request: context.req.raw,
+    }),
+  );
   app.get("/consent", (context) => context.html(consentPage()));
   app.post("/consent", async (context) => {
     const form = await context.req.parseBody();
@@ -116,7 +142,7 @@ export function createApp(
         502,
       );
     }
-    return context.redirect(location, 303);
+    return redirectWithCookies(response, location);
   });
 
   app.route("/api/dashboard", createDashboardApp());

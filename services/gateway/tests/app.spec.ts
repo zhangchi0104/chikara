@@ -104,6 +104,7 @@ describe("gateway", () => {
         "/sign-in",
         "/sign-up",
         "/consent",
+        "/two-factor",
       ]) {
         const response = yield* Effect.promise(() =>
           Promise.resolve(app.request(path, undefined, binding)),
@@ -117,6 +118,47 @@ describe("gateway", () => {
         "/sign-in",
         "/sign-up",
         "/consent",
+        "/two-factor",
+      ]);
+    }),
+  );
+
+  it.effect("forwards native posts for public auth pages", () =>
+    Effect.gen(function* () {
+      const requests: Array<{ body: string; method: string; path: string }> =
+        [];
+      const binding = authBinding(async (request) => {
+        requests.push({
+          body: await request.text(),
+          method: request.method,
+          path: new URL(request.url).pathname,
+        });
+        return new Response("auth");
+      });
+
+      for (const path of ["/sign-in", "/two-factor", "/consent"]) {
+        const response = yield* Effect.promise(() =>
+          Promise.resolve(
+            app.request(
+              path,
+              {
+                body: "field=value",
+                headers: {
+                  "content-type": "application/x-www-form-urlencoded",
+                },
+                method: "POST",
+              },
+              binding,
+            ),
+          ),
+        );
+        expect(response.status).toBe(200);
+      }
+
+      expect(requests).toEqual([
+        { body: "field=value", method: "POST", path: "/sign-in" },
+        { body: "field=value", method: "POST", path: "/two-factor" },
+        { body: "field=value", method: "POST", path: "/consent" },
       ]);
     }),
   );

@@ -2,7 +2,7 @@ import { BOOTSTRAP_KEY } from "../src/dashboard/dashboard.auth.js";
 import { createIdentifier, digest } from "../src/dashboard/dashboard.crypto.js";
 
 const mode = process.argv.includes("--remote") ? "--remote" : "--local";
-const token = createIdentifier("chikara_bootstrap_");
+const token = createIdentifier("otakuma_bootstrap_");
 const value = JSON.stringify({ digest: await digest(token) });
 const processResult = Bun.spawn(
   [

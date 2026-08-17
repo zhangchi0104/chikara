@@ -24,9 +24,10 @@
   },
   "dependencies": {
     "@better-auth/oauth-provider": "1.6.26",
+    "@better-auth/passkey": "1.6.26",
+    "@repo/cloudflare": "workspace:*",
     "better-auth": "1.6.26",
     "effect": "catalog:",
-    "@repo/cloudflare": "workspace:*",
     "hono": "catalog:"
   },
   "devDependencies": {

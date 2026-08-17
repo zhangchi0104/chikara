@@ -10,7 +10,7 @@ export interface GatewayBindings {
 }
 
 const AUTH_ROUTE_PREFIX = "/auth";
-const AUTH_PAGES = ["/consent", "/sign-in", "/sign-up"] as const;
+const AUTH_PAGES = ["/consent", "/sign-in", "/sign-up", "/two-factor"] as const;
 const AUTH_METADATA_PATH = "/.well-known/oauth-authorization-server/api/auth";
 
 function createAuthRequest(request: Request): Request {
@@ -52,7 +52,9 @@ export function createApp(): Hono<{ Bindings: GatewayBindings }> {
     forwardAuth(context.env.AUTH, context.req.raw),
   );
   for (const path of AUTH_PAGES) {
-    app.get(path, (context) => forwardAuth(context.env.AUTH, context.req.raw));
+    app.on(["GET", "POST"], path, (context) =>
+      forwardAuth(context.env.AUTH, context.req.raw),
+    );
   }
   app.all(`${AUTH_ROUTE_PREFIX}/*`, (context) =>
     forwardAuth(context.env.AUTH, createAuthRequest(context.req.raw)),

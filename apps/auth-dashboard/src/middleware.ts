@@ -1,15 +1,21 @@
 import { defineMiddleware } from "astro:middleware";
-import { getDashboardSession } from "./lib/auth.js";
-
-const protectedPages = new Set(["/apis", "/applications", "/users"]);
+import { getAccountSession } from "./lib/auth.js";
+import {
+  authenticatedLanding,
+  canAccessPage,
+  isProtectedPage,
+} from "./lib/navigation.js";
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  if (!protectedPages.has(context.url.pathname)) return next();
-  const session = await getDashboardSession(context.request);
+  const pathname = context.url.pathname;
+  if (!isProtectedPage(pathname)) return next();
+  const session = await getAccountSession(context.request);
   if (!session.data) {
-    const error = session.status === 403 ? "?error=access" : "";
-    return context.redirect(`/sign-in${error}`);
+    return context.redirect("/sign-in");
   }
-  context.locals.superuser = session.data;
+  if (!canAccessPage(pathname, session.data)) {
+    return context.redirect(authenticatedLanding(session.data));
+  }
+  context.locals.account = session.data;
   return next();
 });

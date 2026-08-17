@@ -4,7 +4,7 @@ import { readAuthConfig } from "../src/configs/auth.config.js";
 
 const validBindings = {
   AUTH_ALLOW_DYNAMIC_CLIENT_REGISTRATION: "false" as const,
-  AUTH_TRUSTED_ORIGINS: "http://localhost:8787, chikara:// ",
+  AUTH_TRUSTED_ORIGINS: "http://localhost:8787/, chikara:// ",
   BETTER_AUTH_SECRET: "a-secure-development-secret-with-32-characters",
   BETTER_AUTH_URL: "http://localhost:8787",
 };
@@ -17,6 +17,7 @@ describe("auth configuration", () => {
       expect(config).toEqual({
         allowDynamicClientRegistration: false,
         baseUrl: "http://localhost:8787",
+        passkeyRpId: "localhost",
         trustedOrigins: ["http://localhost:8787", "chikara://"],
       });
       expect(String(secret)).toBe("<redacted>");
@@ -34,6 +35,7 @@ describe("auth configuration", () => {
       expect(config).toEqual({
         allowDynamicClientRegistration: false,
         baseUrl: "http://localhost:8787",
+        passkeyRpId: "localhost",
         trustedOrigins: [],
       });
       expect(String(secret)).toBe("<redacted>");
@@ -60,6 +62,71 @@ describe("auth configuration", () => {
           BETTER_AUTH_URL: "https://auth.example.com/api/auth",
         }),
       ).toThrow(/BETTER_AUTH_URL must be an HTTP\(S\) origin/);
+    }),
+  );
+
+  it.effect("rejects malformed trusted origins", () =>
+    Effect.sync(() => {
+      expect(() =>
+        readAuthConfig({
+          ...validBindings,
+          AUTH_TRUSTED_ORIGINS: "http://",
+        }),
+      ).toThrow(
+        /AUTH_TRUSTED_ORIGINS entries must be valid origins with a URL scheme/,
+      );
+    }),
+  );
+
+  it.effect("rejects trusted HTTP URLs with a path", () =>
+    Effect.sync(() => {
+      expect(() =>
+        readAuthConfig({
+          ...validBindings,
+          AUTH_TRUSTED_ORIGINS: "https://dashboard.example.com/profile",
+        }),
+      ).toThrow(
+        /AUTH_TRUSTED_ORIGINS entries must be valid origins with a URL scheme/,
+      );
+    }),
+  );
+
+  it.effect("accepts a shared passkey RP ID for sibling origins", () =>
+    Effect.sync(() => {
+      const { secret: _secret, ...config } = readAuthConfig({
+        ...validBindings,
+        AUTH_PASSKEY_RP_ID: "Example.COM",
+        AUTH_TRUSTED_ORIGINS: "https://dashboard.example.com",
+        BETTER_AUTH_URL: "https://auth.example.com",
+      });
+
+      expect(config.passkeyRpId).toBe("example.com");
+    }),
+  );
+
+  it.effect("rejects a passkey RP ID that cannot serve a trusted origin", () =>
+    Effect.sync(() => {
+      expect(() =>
+        readAuthConfig({
+          ...validBindings,
+          AUTH_PASSKEY_RP_ID: "auth.example.com",
+          AUTH_TRUSTED_ORIGINS: "https://dashboard.example.com",
+          BETTER_AUTH_URL: "https://auth.example.com",
+        }),
+      ).toThrow(
+        /AUTH_PASSKEY_RP_ID auth\.example\.com cannot be used from https:\/\/dashboard\.example\.com/,
+      );
+    }),
+  );
+
+  it.effect("rejects a passkey RP ID containing a scheme or port", () =>
+    Effect.sync(() => {
+      expect(() =>
+        readAuthConfig({
+          ...validBindings,
+          AUTH_PASSKEY_RP_ID: "https://auth.example.com:443",
+        }),
+      ).toThrow(/AUTH_PASSKEY_RP_ID must be a hostname/);
     }),
   );
 

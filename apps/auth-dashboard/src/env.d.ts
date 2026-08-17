@@ -2,6 +2,6 @@
 
 declare namespace App {
   interface Locals {
-    superuser: import("@chikara/auth/dashboard-contract").Superuser;
+    account: import("@chikara/auth/dashboard-contract").AccountSession;
   }
 }

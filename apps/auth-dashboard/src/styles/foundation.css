@@ -128,18 +128,15 @@ button:disabled {
   font-size: 11px;
   letter-spacing: 0.04em;
 }
-.tenant-switcher span:last-child,
-.profile-compact span:last-child {
+.tenant-switcher span:last-child {
   min-width: 0;
   display: grid;
 }
-.tenant-switcher small,
-.profile-compact small {
+.tenant-switcher small {
   color: #aeb8c9;
   font-size: 11px;
 }
-.tenant-switcher strong,
-.profile-compact strong {
+.tenant-switcher strong {
   overflow: hidden;
   font-size: 13px;
   text-overflow: ellipsis;
@@ -186,13 +183,6 @@ button:disabled {
   padding-top: 18px;
   border-top: 1px solid #2b374c;
 }
-.profile-compact {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: center;
-  gap: 9px;
-}
 .avatar {
   width: 34px;
   height: 34px;
@@ -211,11 +201,4 @@ button:disabled {
 .icon-button:hover {
   background: #edf0f4;
   color: var(--ink);
-}
-.icon-button.inverse {
-  color: #aeb8c9;
-}
-.icon-button.inverse:hover {
-  background: #29364c;
-  color: white;
 }

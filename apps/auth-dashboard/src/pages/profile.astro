@@ -1,0 +1,83 @@
+---
+import TwoFactorPanel from "../components/TwoFactorPanel.astro";
+import ProfileLayout from "../layouts/ProfileLayout.astro";
+import { formatDate, initials } from "../lib/models.js";
+
+const account = Astro.locals.account;
+const accessLabel = account.canManage ? "Administrator" : "Member";
+const detailRowClasses =
+  "grid min-h-[62px] grid-cols-[145px_minmax(0,1fr)] items-center gap-5 border-b border-[#e8ebf0] px-6 py-[11px] last:border-b-0 profile-compact:grid-cols-1 profile-compact:gap-1 profile-compact:px-[18px] profile-compact:py-3.5";
+const detailTermClasses = "text-[13px] text-ink-soft";
+const detailValueClasses =
+  "m-0 flex min-w-0 flex-wrap items-center gap-2 font-[620] [overflow-wrap:anywhere]";
+---
+
+<ProfileLayout account={account} title="Profile" description="Your identity and access in Otakuma Auth.">
+  <section
+    class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[18px] rounded-surface border border-line bg-paper p-[clamp(22px,4vw,32px)] profile-compact:grid-cols-[auto_minmax(0,1fr)]"
+  >
+    <div
+      class="grid size-[68px] place-items-center rounded-[14px] bg-nav text-[22px] font-[760] tracking-[-0.02em] text-white profile-compact:size-[58px]"
+      aria-hidden="true"
+    >
+      {initials(account.user.name)}
+    </div>
+    <div class="min-w-0">
+      <h2 class="m-0 text-[25px] tracking-[-0.025em] [overflow-wrap:anywhere]">{account.user.name}</h2>
+      <p class="mt-1 mb-0 text-ink-soft [overflow-wrap:anywhere]">{account.user.email}</p>
+    </div>
+    <span
+      class:list={[
+        "badge profile-compact:col-start-2 profile-compact:justify-self-start",
+        { neutral: !account.canManage },
+      ]}
+    >
+      {accessLabel}
+    </span>
+  </section>
+
+  <section
+    class="mt-[18px] overflow-hidden rounded-surface border border-line bg-paper"
+    aria-labelledby="account-details-title"
+  >
+    <header class="border-b border-line px-6 pt-[22px] pb-[18px] profile-compact:px-[18px]">
+      <h2 class="m-0 text-[19px] tracking-[-0.02em]" id="account-details-title">Account details</h2>
+      <p class="mt-1.5 mb-0 text-ink-soft">The identity Otakuma Auth shares with applications you approve.</p>
+    </header>
+    <dl class="m-0">
+      <div class={detailRowClasses}>
+        <dt class={detailTermClasses}>Full name</dt>
+        <dd class={detailValueClasses}>{account.user.name}</dd>
+      </div>
+      <div class={detailRowClasses}>
+        <dt class={detailTermClasses}>Email address</dt>
+        <dd class={detailValueClasses}>
+          <span>{account.user.email}</span>
+          <span class:list={["badge", { neutral: !account.user.emailVerified }]}>
+            {account.user.emailVerified ? "Verified" : "Not verified"}
+          </span>
+        </dd>
+      </div>
+      <div class={detailRowClasses}>
+        <dt class={detailTermClasses}>Account type</dt>
+        <dd class={detailValueClasses}>{accessLabel}</dd>
+      </div>
+      <div class={detailRowClasses}>
+        <dt class={detailTermClasses}>Member since</dt>
+        <dd class={detailValueClasses}>{formatDate(account.user.createdAt)}</dd>
+      </div>
+      <div class={detailRowClasses}>
+        <dt class={detailTermClasses}>User ID</dt>
+        <dd class={detailValueClasses}>
+          <code class="code font-normal">{account.user.id}</code>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <TwoFactorPanel
+    idPrefix="profile-two-factor"
+    profile
+    state={account.user.twoFactorState}
+  />
+</ProfileLayout>
