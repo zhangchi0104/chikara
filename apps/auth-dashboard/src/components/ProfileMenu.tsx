@@ -7,6 +7,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { operationLocation } from "@/lib/dashboard-operations.js";
 import { cn } from "@/lib/utils";
 
 interface ProfileMenuUser {
@@ -153,13 +154,11 @@ export default function ProfileMenu({
         </DropdownMenuContent>
       </DropdownMenu>
       <form
-        action="/actions/auth/sign-out"
+        action={operationLocation("sign-out", { returnTo: "/sign-in" })}
         className="hidden"
         id={logoutFormId}
         method="post"
-      >
-        <input name="_returnTo" type="hidden" value="/sign-in" />
-      </form>
+      ></form>
     </div>
   );
 }

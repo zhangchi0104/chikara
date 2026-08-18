@@ -19,6 +19,11 @@ export interface AuthConfig {
   readonly trustedOrigins: ReadonlyArray<string>;
 }
 
+export class AuthConfigError extends Schema.TaggedErrorClass<AuthConfigError>()(
+  "AuthConfigError",
+  { message: Schema.String },
+) {}
+
 function isHttpOrigin(url: URL): boolean {
   return (
     (url.protocol === "http:" || url.protocol === "https:") &&
@@ -116,23 +121,25 @@ const authConfig = Config.all({
   ),
 });
 
-export function readAuthConfig(bindings: AuthConfigBindings): AuthConfig {
+export function readAuthConfig(bindings: AuthConfigBindings) {
   const provider = CFConfigProvider.fromBindings(bindings);
-  const config = Effect.runSync(authConfig.parse(provider));
-  const passkeyRpId = config.passkeyRpId || new URL(config.baseUrl).hostname;
-  const webOrigins = [config.baseUrl, ...config.trustedOrigins].filter(
-    (origin) => {
-      const protocol = new URL(origin).protocol;
-      return protocol === "http:" || protocol === "https:";
-    },
-  );
-  const incompatibleOrigin = webOrigins.find(
-    (origin) => !supportsRpId(origin, passkeyRpId),
-  );
-  if (incompatibleOrigin) {
-    throw new Error(
-      `AUTH_PASSKEY_RP_ID ${passkeyRpId} cannot be used from ${incompatibleOrigin}`,
+  return Effect.gen(function* () {
+    const config = yield* authConfig.parse(provider);
+    const passkeyRpId = config.passkeyRpId || new URL(config.baseUrl).hostname;
+    const webOrigins = [config.baseUrl, ...config.trustedOrigins].filter(
+      (origin) => {
+        const protocol = new URL(origin).protocol;
+        return protocol === "http:" || protocol === "https:";
+      },
     );
-  }
-  return { ...config, passkeyRpId };
+    const incompatibleOrigin = webOrigins.find(
+      (origin) => !supportsRpId(origin, passkeyRpId),
+    );
+    if (incompatibleOrigin) {
+      return yield* new AuthConfigError({
+        message: `AUTH_PASSKEY_RP_ID ${passkeyRpId} cannot be used from ${incompatibleOrigin}`,
+      });
+    }
+    return { ...config, passkeyRpId } satisfies AuthConfig;
+  });
 }

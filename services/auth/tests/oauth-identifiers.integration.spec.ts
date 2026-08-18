@@ -1,7 +1,7 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
 import {
   BOOTSTRAP_KEY,
@@ -9,6 +9,7 @@ import {
 } from "../src/dashboard/dashboard.auth.js";
 import { digest } from "../src/dashboard/dashboard.crypto.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 
 const LEGACY_CLIENT_ID = "chikara_legacy_client";
 const LEGACY_CLIENT_REFERENCE = "chikara:auth-dashboard";
@@ -26,6 +27,10 @@ function sessionCookie(response: Response): string {
 function withoutPrefix(value: string, prefix: string): string {
   if (!value.startsWith(prefix)) throw new Error("Fixture prefix mismatch.");
   return value.slice(prefix.length);
+}
+
+function hashLegacyValue(value: string, prefix: string) {
+  return Effect.runPromise(digest(withoutPrefix(value, prefix)));
 }
 
 async function seedLegacyOAuthState(database: D1Database): Promise<void> {
@@ -50,7 +55,7 @@ async function seedLegacyOAuthState(database: D1Database): Promise<void> {
       .bind(
         "legacy-client-row",
         LEGACY_CLIENT_ID,
-        await digest(withoutPrefix(LEGACY_CLIENT_SECRET, "chikara_cs_")),
+        await hashLegacyValue(LEGACY_CLIENT_SECRET, "chikara_cs_"),
         JSON.stringify(["https://legacy.example/callback"]),
         "client_secret_basic",
         JSON.stringify([
@@ -72,7 +77,7 @@ async function seedLegacyOAuthState(database: D1Database): Promise<void> {
       )
       .bind(
         "legacy-access-row",
-        await digest(withoutPrefix(LEGACY_ACCESS_TOKEN, "chikara_at_")),
+        await hashLegacyValue(LEGACY_ACCESS_TOKEN, "chikara_at_"),
         LEGACY_CLIENT_ID,
         USER_ID,
         now + 3_600_000,
@@ -87,7 +92,7 @@ async function seedLegacyOAuthState(database: D1Database): Promise<void> {
       )
       .bind(
         "legacy-refresh-row",
-        await digest(withoutPrefix(LEGACY_REFRESH_TOKEN, "chikara_rt_")),
+        await hashLegacyValue(LEGACY_REFRESH_TOKEN, "chikara_rt_"),
         LEGACY_CLIENT_ID,
         USER_ID,
         now + 86_400_000,
@@ -109,15 +114,17 @@ async function bootstrapAndSignIn(bindings: AuthBindings): Promise<string> {
   const token = "otakuma_bootstrap_legacy_reference_test";
   await bindings.AUTH_BOOTSTRAP.put(
     BOOTSTRAP_KEY,
-    JSON.stringify({ digest: await digest(token) }),
+    JSON.stringify({ digest: await Effect.runPromise(digest(token)) }),
   );
-  await bootstrapSuperuser(bindings, {
-    email: "admin@example.com",
-    name: "Admin",
-    password: "correct horse battery staple",
-    token,
-  });
-  const auth = await createAuth(bindings);
+  await Effect.runPromise(
+    bootstrapSuperuser(bindings, {
+      email: "admin@example.com",
+      name: "Admin",
+      password: "correct horse battery staple",
+      token,
+    }),
+  );
+  const auth = await Effect.runPromise(createTestAuth(bindings));
   const response = await auth.handler(
     new Request("http://localhost:8787/api/auth/sign-in/email", {
       body: JSON.stringify({
@@ -165,7 +172,7 @@ describe("OAuth identifier compatibility", () => {
 
   it("accepts legacy client and access token values while issuing Otakuma tokens", async () => {
     await seedLegacyOAuthState(bindings.AUTH_DB);
-    const auth = await createAuth(bindings);
+    const auth = await Effect.runPromise(createTestAuth(bindings));
     const issued = await auth.handler(
       oauthRequest(
         "token",
@@ -229,7 +236,7 @@ describe("OAuth identifier compatibility", () => {
 
   it("rotates a legacy refresh token into Otakuma access and refresh tokens", async () => {
     await seedLegacyOAuthState(bindings.AUTH_DB);
-    const auth = await createAuth(bindings);
+    const auth = await Effect.runPromise(createTestAuth(bindings));
     const refreshed = await auth.handler(
       oauthRequest(
         "token",
@@ -290,7 +297,7 @@ describe("OAuth identifier compatibility", () => {
       ).bind(
         "legacy-managed-row",
         LEGACY_CLIENT_ID,
-        await digest(withoutPrefix(LEGACY_CLIENT_SECRET, "chikara_cs_")),
+        await hashLegacyValue(LEGACY_CLIENT_SECRET, "chikara_cs_"),
         "Legacy Application",
         JSON.stringify(["https://legacy.example/callback"]),
         LEGACY_CLIENT_REFERENCE,
@@ -361,9 +368,11 @@ describe("OAuth identifier compatibility", () => {
         LEGACY_CLIENT_ID,
       )
       .run();
-    const auth = await createAuth(bindings, {
-      clientReference: LEGACY_CLIENT_REFERENCE,
-    });
+    const auth = await Effect.runPromise(
+      createTestAuth(bindings, {
+        clientReference: LEGACY_CLIENT_REFERENCE,
+      }),
+    );
     const issued = await auth.handler(
       oauthRequest(
         "token",

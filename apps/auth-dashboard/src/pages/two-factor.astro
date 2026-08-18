@@ -1,15 +1,18 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
-import { getTwoFactorChallenge } from "../lib/auth.js";
+import { dashboardQueries } from "../lib/auth.js";
+import { operationLocation } from "../lib/dashboard-operations.js";
 import { safeLocalPath } from "../lib/navigation.js";
 
 const requestedReturnTo = Astro.url.searchParams.get("returnTo");
 const returnTo = safeLocalPath(requestedReturnTo, "/");
-const challenge = await getTwoFactorChallenge(Astro.request);
+const challenge = await dashboardQueries.twoFactorChallenge(Astro.request);
 if (!challenge.data) return Astro.redirect("/sign-in");
 const methods = challenge.data;
 const passkey = methods.includes("passkey");
 const totp = methods.includes("totp");
+const totpAction = operationLocation("verify-totp", { returnTo });
+const backupAction = operationLocation("verify-backup-code", { returnTo });
 ---
 
 <AuthLayout title="Verify your sign-in" description="Complete one of the enrolled verification methods for this account.">
@@ -25,14 +28,12 @@ const totp = methods.includes("totp");
     {totp && (
       <>
         <p class="form-note">Enter the six-digit code from your authenticator app. The code expires quickly and can only be used once.</p>
-        <form action="/actions/auth/two-factor/verify-totp" method="post" data-enhance data-next={returnTo}>
-          <input type="hidden" name="_returnTo" value={returnTo} />
+        <form action={totpAction} method="post" data-enhance data-next={returnTo}>
           <label class="field"><span>Authenticator code</span><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required autofocus /></label>
           <button class="button button-primary" type="submit">Verify and continue</button>
         </form>
         <div class="auth-divider" aria-hidden="true"><span>or</span></div>
-        <form action="/actions/auth/two-factor/verify-backup-code" method="post" data-enhance data-next={returnTo}>
-          <input type="hidden" name="_returnTo" value={returnTo} />
+        <form action={backupAction} method="post" data-enhance data-next={returnTo}>
           <label class="field"><span>Recovery code</span><input name="code" autocomplete="off" spellcheck="false" required /></label>
           <button class="button" type="submit">Use a recovery code</button>
         </form>

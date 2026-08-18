@@ -1,7 +1,7 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
 import {
   BOOTSTRAP_KEY,
@@ -9,6 +9,9 @@ import {
 } from "../src/dashboard/dashboard.auth.js";
 import { digest } from "../src/dashboard/dashboard.crypto.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
+
+const runEffect = Effect.runPromise;
 
 function sessionCookie(response: Response): string {
   const header = response.headers.get("set-cookie");
@@ -38,15 +41,17 @@ async function signIn(bindings: AuthBindings): Promise<string> {
   const token = "chikara_security_bootstrap_value";
   await bindings.AUTH_BOOTSTRAP.put(
     BOOTSTRAP_KEY,
-    JSON.stringify({ digest: await digest(token) }),
+    JSON.stringify({ digest: await Effect.runPromise(digest(token)) }),
   );
-  await bootstrapSuperuser(bindings, {
-    email: "admin@example.com",
-    name: "Admin",
-    password: "correct horse battery staple",
-    token,
-  });
-  const response = await (await createAuth(bindings)).handler(
+  await Effect.runPromise(
+    bootstrapSuperuser(bindings, {
+      email: "admin@example.com",
+      name: "Admin",
+      password: "correct horse battery staple",
+      token,
+    }),
+  );
+  const response = await (await runEffect(createTestAuth(bindings))).handler(
     new Request("http://localhost:8787/api/auth/sign-in/email", {
       body: JSON.stringify({
         email: "admin@example.com",
@@ -64,7 +69,7 @@ async function signIn(bindings: AuthBindings): Promise<string> {
 }
 
 async function signUpMember(bindings: AuthBindings): Promise<string> {
-  const response = await (await createAuth(bindings)).handler(
+  const response = await (await runEffect(createTestAuth(bindings))).handler(
     new Request("http://localhost:8787/api/auth/sign-up/email", {
       body: JSON.stringify({
         email: "member@example.com",
@@ -112,7 +117,7 @@ describe("auth security integrations", () => {
 
   it("returns WebAuthn registration options for an authenticated user", async () => {
     const cookie = await signIn(bindings);
-    const auth = await createAuth(bindings);
+    const auth = await runEffect(createTestAuth(bindings));
     const response = await auth.handler(
       new Request(
         "http://localhost:8787/api/auth/passkey/generate-register-options",
@@ -131,7 +136,7 @@ describe("auth security integrations", () => {
 
   it("lets an ordinary member enroll TOTP and challenges later sign-ins", async () => {
     const cookie = await signUpMember(bindings);
-    const auth = await createAuth(bindings);
+    const auth = await runEffect(createTestAuth(bindings));
     const enabled = await auth.handler(
       new Request("http://localhost:8787/api/auth/two-factor/enable", {
         body: JSON.stringify({ password: "another secure password" }),
@@ -347,7 +352,7 @@ describe("auth security integrations", () => {
   });
 
   it("rejects unauthenticated enrollment requests", async () => {
-    const auth = await createAuth(bindings);
+    const auth = await runEffect(createTestAuth(bindings));
     const unauthenticated = await auth.handler(
       new Request("http://localhost:8787/api/auth/two-factor/enable", {
         body: JSON.stringify({ password: "another secure password" }),
@@ -371,7 +376,7 @@ describe("auth security integrations", () => {
       .bind(user.id)
       .run();
 
-    const response = await (await createAuth(bindings)).handler(
+    const response = await (await runEffect(createTestAuth(bindings))).handler(
       new Request("http://localhost:8787/api/auth/two-factor/enable", {
         body: JSON.stringify({}),
         headers: {

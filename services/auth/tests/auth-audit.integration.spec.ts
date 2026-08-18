@@ -1,7 +1,7 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
 import {
   BOOTSTRAP_KEY,
@@ -9,6 +9,7 @@ import {
 } from "../src/dashboard/dashboard.auth.js";
 import { digest } from "../src/dashboard/dashboard.crypto.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 
 interface EventRow {
   readonly actorUserId: string | null;
@@ -59,7 +60,7 @@ async function authRequest(
     origin: "http://localhost:4321",
   });
   if (cookie) headers.set("cookie", cookie);
-  return (await createAuth(bindings)).handler(
+  return (await Effect.runPromise(createTestAuth(bindings))).handler(
     new Request(`http://localhost:8787/api/auth${path}`, {
       body: JSON.stringify(body),
       headers,
@@ -84,14 +85,16 @@ async function bootstrapAdmin(bindings: AuthBindings): Promise<string> {
   const password = "correct horse battery staple";
   await bindings.AUTH_BOOTSTRAP.put(
     BOOTSTRAP_KEY,
-    JSON.stringify({ digest: await digest(token) }),
+    JSON.stringify({ digest: await Effect.runPromise(digest(token)) }),
   );
-  await bootstrapSuperuser(bindings, {
-    email: "admin@example.com",
-    name: "Admin",
-    password,
-    token,
-  });
+  await Effect.runPromise(
+    bootstrapSuperuser(bindings, {
+      email: "admin@example.com",
+      name: "Admin",
+      password,
+      token,
+    }),
+  );
   const response = await authRequest(bindings, "/sign-in/email", {
     email: "admin@example.com",
     password,
@@ -205,7 +208,7 @@ describe("auth account activity", () => {
       "secret",
     );
     if (!encodedSecret) throw new Error("The TOTP URI omitted its secret.");
-    const auth = await createAuth(bindings);
+    const auth = await Effect.runPromise(createTestAuth(bindings));
     const secret = decodeBase32(encodedSecret);
     const enrollmentCode = (await auth.api.generateTOTP({ body: { secret } }))
       .code;

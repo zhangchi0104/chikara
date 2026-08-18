@@ -1,7 +1,10 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { coordinateTwoFactorRequest } from "../src/two-factor.coordination.js";
-import { readTwoFactorState } from "../src/two-factor.state.js";
+import {
+  coordinateAccountProtectionRequest,
+  readTwoFactorState,
+} from "../src/account-protection.js";
 import { applyAuthMigrations } from "./auth-database.js";
 
 const userId = "activity-user";
@@ -45,14 +48,16 @@ describe("two-factor account activity", () => {
 
   it("classifies each successful serialized two-factor mutation", async () => {
     async function run(path: string, mutate: () => Promise<void>) {
-      const response = await coordinateTwoFactorRequest(
-        request(path),
-        database,
-        userId,
-        async () => {
-          await mutate();
-          return Response.json({ status: true });
-        },
+      const response = await Effect.runPromise(
+        coordinateAccountProtectionRequest(request(path), {
+          database,
+          forward: () =>
+            Effect.promise(async () => {
+              await mutate();
+              return Response.json({ status: true });
+            }),
+          userId,
+        }),
       );
       expect(response.status).toBe(200);
     }
@@ -126,24 +131,31 @@ describe("two-factor account activity", () => {
       .bind(userId)
       .run();
     let forwards = 0;
-    const response = await coordinateTwoFactorRequest(
-      request("/sign-in/email", {
-        email: "activity@example.com",
-        password: "correct password",
-      }),
-      database,
-      userId,
-      async () => {
-        forwards += 1;
-        return forwards === 1
-          ? Response.json({ twoFactorRedirect: true })
-          : Response.json({ token: "issued" });
-      },
+    const response = await Effect.runPromise(
+      coordinateAccountProtectionRequest(
+        request("/sign-in/email", {
+          email: "activity@example.com",
+          password: "correct password",
+        }),
+        {
+          database,
+          forward: () =>
+            Effect.sync(() => {
+              forwards += 1;
+              return forwards === 1
+                ? Response.json({ twoFactorRedirect: true })
+                : Response.json({ token: "issued" });
+            }),
+          userId,
+        },
+      ),
     );
 
     expect(response.status).toBe(200);
     expect(forwards).toBe(2);
-    expect(await readTwoFactorState(database, userId)).toBe("disabled");
+    expect(await Effect.runPromise(readTwoFactorState(database, userId))).toBe(
+      "disabled",
+    );
     expect(
       await database
         .prepare(

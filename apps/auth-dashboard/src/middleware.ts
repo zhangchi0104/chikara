@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { getAccountSession } from "./lib/auth.js";
+import { dashboardQueries } from "./lib/auth.js";
 import {
   authenticatedLanding,
   canAccessPage,
@@ -9,7 +9,7 @@ import {
 export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = context.url.pathname;
   if (!isProtectedPage(pathname)) return next();
-  const session = await getAccountSession(context.request);
+  const session = await dashboardQueries.accountSession(context.request);
   if (!session.data) {
     return context.redirect("/sign-in");
   }

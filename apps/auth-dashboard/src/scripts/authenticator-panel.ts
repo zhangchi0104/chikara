@@ -1,35 +1,30 @@
-import { authenticatorStateChangedEvent } from "../lib/account-protection.js";
-import {
-  backupCodeResult,
-  setupSecret,
-  TwoFactorWorkflow,
-  twoFactorPresentation,
-  twoFactorSetup,
-  twoFactorState,
-} from "../lib/two-factor.js";
+import type {
+  AccountSecuritySnapshot,
+  AccountSecurityWorkflow,
+  AuthenticatorWorkflow,
+} from "../lib/account-security.js";
+import { setupSecret, twoFactorPresentation } from "../lib/two-factor.js";
 import { hideDialog, showDialog } from "./dialog.js";
 import {
   clearFormError,
   containingDialog,
   formValue,
-  postJSON,
   required,
   runForm,
-} from "./two-factor-form.js";
+} from "./security-form.js";
 
-class OtakumaTwoFactorElement extends HTMLElement {
-  readonly #workflow = new TwoFactorWorkflow("disabled");
+export class AuthenticatorPanel {
+  constructor(
+    private readonly root: HTMLElement,
+    private readonly workflow: AccountSecurityWorkflow,
+  ) {}
 
-  connectedCallback(): void {
-    if (this.dataset.initialized === "true") return;
-    const account = twoFactorState(this.dataset.twoFactorState);
-    if (!account) throw new Error("Two-factor account state is invalid.");
-    this.#workflow.setAccount(account);
+  initialize(): void {
     this.requireStructure();
     this.bindForms();
     this.bindActions();
-    this.dataset.initialized = "true";
-    this.render();
+    this.workflow.subscribe(() => this.render(this.workflow.current));
+    this.render(this.workflow.current);
   }
 
   private requireStructure(): void {
@@ -50,38 +45,38 @@ class OtakumaTwoFactorElement extends HTMLElement {
       "[data-two-factor-copy-recovery]",
       "[data-two-factor-acknowledge]",
     ]) {
-      required(this, selector);
+      required(this.root, selector);
     }
     for (const selector of [
       "[data-two-factor-enable-form]",
       "[data-two-factor-reset-form]",
       "[data-two-factor-regenerate-form]",
     ]) {
-      const form = required<HTMLFormElement>(this, selector);
+      const form = required<HTMLFormElement>(this.root, selector);
       containingDialog(form);
       required(form, "[data-two-factor-error]");
     }
     required(
-      required<HTMLFormElement>(this, "[data-two-factor-verify-form]"),
+      required<HTMLFormElement>(this.root, "[data-two-factor-verify-form]"),
       "[data-two-factor-error]",
     );
   }
 
   private bindForms(): void {
     const enable = required<HTMLFormElement>(
-      this,
+      this.root,
       "[data-two-factor-enable-form]",
     );
     const verify = required<HTMLFormElement>(
-      this,
+      this.root,
       "[data-two-factor-verify-form]",
     );
     const reset = required<HTMLFormElement>(
-      this,
+      this.root,
       "[data-two-factor-reset-form]",
     );
     const regenerate = required<HTMLFormElement>(
-      this,
+      this.root,
       "[data-two-factor-regenerate-form]",
     );
     enable.addEventListener("submit", (event) => {
@@ -112,105 +107,67 @@ class OtakumaTwoFactorElement extends HTMLElement {
 
   private bindActions(): void {
     required<HTMLButtonElement>(
-      this,
+      this.root,
       "[data-two-factor-finish-later]",
     ).addEventListener("click", () => {
-      if (this.#workflow.finishLater()) this.render();
+      this.workflow.finishAuthenticatorLater();
     });
-    required(this, "[data-two-factor-copy-secret]").addEventListener(
+    required(this.root, "[data-two-factor-copy-secret]").addEventListener(
       "click",
       () => void this.copySecret(),
     );
-    required(this, "[data-two-factor-copy-recovery]").addEventListener(
+    required(this.root, "[data-two-factor-copy-recovery]").addEventListener(
       "click",
       () => void this.copyRecovery(),
     );
-    required(this, "[data-two-factor-acknowledge]").addEventListener(
+    required(this.root, "[data-two-factor-acknowledge]").addEventListener(
       "click",
       () => this.acknowledgeRecovery(),
     );
   }
 
   private async enable(form: HTMLFormElement): Promise<void> {
-    const password = formValue(form, "password");
-    if (this.#workflow.account === "pending") {
-      await postJSON("/api/auth/two-factor/disable", { password });
-      this.#workflow.setAccount("disabled");
-      this.render();
-    }
-    const setup = twoFactorSetup(
-      await postJSON("/api/auth/two-factor/enable", { password }),
-    );
-    if (!setup) {
-      throw new Error("The setup response was incomplete. Try again.");
-    }
-    this.#workflow.startEnrollment(setup);
+    await this.workflow.enableAuthenticator(formValue(form, "password"));
     hideDialog(containingDialog(form));
-    this.render();
     required<HTMLInputElement>(
-      this,
+      this.root,
       '[data-two-factor-verify-form] input[name="code"]',
     ).focus();
   }
 
   private async verify(form: HTMLFormElement): Promise<void> {
-    const setup = this.#workflow.beginVerification();
-    if (!setup)
-      throw new Error("Generate a setup key before verifying a code.");
-    this.render();
-    try {
-      await postJSON("/api/auth/two-factor/verify-totp", {
-        code: formValue(form, "code"),
-      });
-      this.#workflow.showRecovery(setup.backupCodes);
-      this.render();
-      this.showRecoveryDialog(
-        required<HTMLElement>(this, "[data-two-factor-reset-trigger]"),
-      );
-    } catch (error) {
-      this.#workflow.verificationFailed();
-      this.render();
-      throw error;
-    }
+    await this.workflow.verifyAuthenticator(formValue(form, "code"));
+    this.showRecoveryDialog(
+      required<HTMLElement>(this.root, "[data-two-factor-reset-trigger]"),
+    );
   }
 
   private async reset(form: HTMLFormElement): Promise<void> {
-    await postJSON("/api/auth/two-factor/disable", {
-      password: formValue(form, "password"),
-    });
-    this.#workflow.setAccount("disabled");
+    await this.workflow.resetAuthenticator(formValue(form, "password"));
     hideDialog(containingDialog(form));
-    this.render();
     window.location.reload();
   }
 
   private async regenerate(form: HTMLFormElement): Promise<void> {
-    const codes = backupCodeResult(
-      await postJSON("/api/auth/two-factor/generate-backup-codes", {
-        password: formValue(form, "password"),
-      }),
-    );
-    if (!codes) throw new Error("The recovery-code response was incomplete.");
+    await this.workflow.regenerateRecoveryCodes(formValue(form, "password"));
     hideDialog(containingDialog(form));
-    this.#workflow.showRecovery(codes);
-    this.render();
     this.showRecoveryDialog(
-      required<HTMLElement>(this, "[data-two-factor-regenerate-trigger]"),
+      required<HTMLElement>(this.root, "[data-two-factor-regenerate-trigger]"),
     );
   }
 
-  private render(): void {
-    const account = this.#workflow.account;
+  private render(snapshot: AccountSecuritySnapshot): void {
+    const account = snapshot.authenticatorState;
     const view = twoFactorPresentation[account];
-    const current = this.#workflow.current;
-    const badge = required<HTMLElement>(this, "[data-two-factor-badge]");
-    const status = required<HTMLElement>(this, "[data-two-factor-status]");
+    const current = snapshot.authenticator;
+    const badge = required<HTMLElement>(this.root, "[data-two-factor-badge]");
+    const status = required<HTMLElement>(this.root, "[data-two-factor-status]");
     const enable = required<HTMLButtonElement>(
-      this,
+      this.root,
       "[data-two-factor-enable-trigger]",
     );
     const reset = required<HTMLButtonElement>(
-      this,
+      this.root,
       "[data-two-factor-reset-trigger]",
     );
     const enrolling = current.kind === "enrolling";
@@ -230,47 +187,36 @@ class OtakumaTwoFactorElement extends HTMLElement {
     reset.textContent =
       account === "enabled" ? "Disable authenticator" : "Reset setup";
     reset.classList.toggle("button-danger", account === "enabled");
-    required<HTMLElement>(this, "[data-two-factor-recovery]").hidden =
+    required<HTMLElement>(this.root, "[data-two-factor-recovery]").hidden =
       account !== "enabled";
-    required<HTMLElement>(this, "[data-two-factor-setup]").hidden =
+    required<HTMLElement>(this.root, "[data-two-factor-setup]").hidden =
       current.kind !== "enrolling";
     required<HTMLButtonElement>(
-      this,
+      this.root,
       "[data-two-factor-finish-later]",
     ).disabled = current.kind === "enrolling" && current.verifying;
-    this.renderEnrollment();
-    this.renderRecovery();
-    this.dispatchEvent(
-      new CustomEvent(authenticatorStateChangedEvent, {
-        bubbles: true,
-        detail: account,
-      }),
-    );
+    this.renderEnrollment(current);
+    this.renderRecovery(current);
   }
 
-  private renderEnrollment(): void {
-    const current = this.#workflow.current;
-    const secretOutput = required<HTMLElement>(
-      this,
-      "[data-two-factor-secret]",
-    );
+  private renderEnrollment(current: AuthenticatorWorkflow): void {
+    const output = required<HTMLElement>(this.root, "[data-two-factor-secret]");
     const openApp = required<HTMLAnchorElement>(
-      this,
+      this.root,
       "[data-two-factor-open-app]",
     );
     if (current.kind !== "enrolling") {
-      secretOutput.textContent = "";
+      output.textContent = "";
       openApp.removeAttribute("href");
       return;
     }
-    secretOutput.textContent = setupSecret(current.setup.totpURI) ?? "";
+    output.textContent = setupSecret(current.setup.totpURI) ?? "";
     openApp.href = current.setup.totpURI;
   }
 
-  private renderRecovery(): void {
-    const current = this.#workflow.current;
+  private renderRecovery(current: AuthenticatorWorkflow): void {
     const list = required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-recovery-codes]",
     );
     const codes = current.kind === "recovery" ? current.codes : [];
@@ -285,17 +231,16 @@ class OtakumaTwoFactorElement extends HTMLElement {
 
   private showRecoveryDialog(opener: HTMLElement): void {
     const list = required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-recovery-codes]",
     );
     const dialog = list.closest("dialog");
     if (!(dialog instanceof HTMLDialogElement)) {
       throw new Error("Recovery codes must be inside a dialog.");
     }
-    const close = required<HTMLButtonElement>(dialog, "[data-close-dialog]");
-    close.hidden = true;
+    required<HTMLButtonElement>(dialog, "[data-close-dialog]").hidden = true;
     required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-recovery-status]",
     ).textContent = "";
     dialog.dataset.locked = "true";
@@ -303,10 +248,10 @@ class OtakumaTwoFactorElement extends HTMLElement {
   }
 
   private async copySecret(): Promise<void> {
-    const current = this.#workflow.current;
+    const current = this.workflow.current.authenticator;
     if (current.kind !== "enrolling") return;
     const status = required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-setup-status]",
     );
     try {
@@ -321,10 +266,10 @@ class OtakumaTwoFactorElement extends HTMLElement {
   }
 
   private async copyRecovery(): Promise<void> {
-    const current = this.#workflow.current;
+    const current = this.workflow.current.authenticator;
     if (current.kind !== "recovery") return;
     const status = required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-recovery-status]",
     );
     try {
@@ -338,20 +283,15 @@ class OtakumaTwoFactorElement extends HTMLElement {
 
   private acknowledgeRecovery(): void {
     const list = required<HTMLElement>(
-      this,
+      this.root,
       "[data-two-factor-recovery-codes]",
     );
     const dialog = list.closest("dialog");
     if (!(dialog instanceof HTMLDialogElement)) return;
-    this.#workflow.acknowledgeRecovery();
+    this.workflow.acknowledgeRecoveryCodes();
     delete dialog.dataset.locked;
     required<HTMLButtonElement>(dialog, "[data-close-dialog]").hidden = false;
     hideDialog(dialog);
-    this.render();
     window.location.reload();
   }
-}
-
-if (!customElements.get("otakuma-two-factor")) {
-  customElements.define("otakuma-two-factor", OtakumaTwoFactorElement);
 }

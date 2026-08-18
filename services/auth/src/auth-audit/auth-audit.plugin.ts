@@ -1,5 +1,6 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
+import { Effect } from "effect";
 import type { AuthEventInput, AuthEventType } from "./auth-audit.models.js";
 import { recordAuthEvent } from "./auth-audit.store.js";
 
@@ -86,7 +87,8 @@ export function createAuthAuditPlugin(database: D1Database): BetterAuthPlugin {
               returnedUserId: returnedUserId(returned),
               sessionUserId: session?.user.id,
             });
-            if (event) await recordAuthEvent(database, event);
+            if (event)
+              await Effect.runPromise(recordAuthEvent(database, event));
           }),
           matcher: ({ path }) => path !== undefined && observedPaths.has(path),
         },

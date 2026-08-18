@@ -1,21 +1,20 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
-import { getAccountSession, getBootstrapStatus } from "../lib/auth.js";
+import { dashboardQueries } from "../lib/auth.js";
+import { operationLocation } from "../lib/dashboard-operations.js";
 import { authenticatedLanding } from "../lib/navigation.js";
 
-const status = await getBootstrapStatus(Astro.request);
+const status = await dashboardQueries.bootstrapStatus(Astro.request);
 if (!status.data) return Astro.redirect("/bootstrap");
-const session = await getAccountSession(Astro.request);
+const session = await dashboardQueries.accountSession(Astro.request);
 if (session.data) {
-  const landing = authenticatedLanding(session.data);
-  return Astro.redirect(landing);
+  return Astro.redirect(authenticatedLanding(session.data));
 }
+const signInAction = operationLocation("sign-in", { returnTo: "/" });
 ---
 
 <AuthLayout title="Welcome back" description="Sign in to your Otakuma Auth account.">
-  <form class="auth-form" action="/actions/auth/sign-in/email" method="post" data-enhance data-next="/">
-    <input type="hidden" name="_returnTo" value="/" />
-    <input type="hidden" name="_boolean" value="rememberMe" />
+  <form class="auth-form" action={signInAction} method="post" data-enhance data-next="/">
     <label class="field">
       <span>Email address</span>
       <input name="email" type="email" autocomplete="email" required />

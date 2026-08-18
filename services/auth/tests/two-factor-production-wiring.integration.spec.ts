@@ -1,11 +1,14 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  coordinateAccountProtectionRequest,
+  readTwoFactorState,
+} from "../src/account-protection.js";
 import { createApp } from "../src/app.js";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
-import { coordinateTwoFactorRequest } from "../src/two-factor.coordination.js";
-import { readTwoFactorState } from "../src/two-factor.state.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 
 const coordinatorUserHeader = "x-test-two-factor-user";
 const email = "coordinated@example.com";
@@ -154,12 +157,16 @@ describe("two-factor production wiring", () => {
               forwardedInit.body = await request.arrayBuffer();
             }
             const forwarded = new Request(request.url, forwardedInit);
-            const auth = await createAuth(workerBindings);
-            return coordinateTwoFactorRequest(
-              forwarded,
-              workerBindings.AUTH_DB,
-              coordinatedUserId,
-              (requestToHandle) => auth.handler(requestToHandle),
+            return Effect.runPromise(
+              Effect.gen(function* () {
+                const auth = yield* createTestAuth(workerBindings);
+                return yield* coordinateAccountProtectionRequest(forwarded, {
+                  database: workerBindings.AUTH_DB,
+                  forward: (requestToHandle) =>
+                    Effect.promise(() => auth.handler(requestToHandle)),
+                  userId: coordinatedUserId,
+                });
+              }),
             );
           },
         },
@@ -245,7 +252,9 @@ describe("two-factor production wiring", () => {
     expect(await conflict?.json()).toMatchObject({
       code: "TWO_FACTOR_SETUP_PENDING",
     });
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe("pending");
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("pending");
     expect(
       await bindings.AUTH_DB.prepare(
         'SELECT COUNT(*) AS "count" FROM "twoFactor" WHERE "userId" = ?',
@@ -276,7 +285,7 @@ describe("two-factor production wiring", () => {
     });
     expect(enrolled.status).toBe(200);
     const secret = await enrollmentSecret(enrolled);
-    const auth = await createAuth(bindings);
+    const auth = await Effect.runPromise(createTestAuth(bindings));
     const generated = await auth.api.generateTOTP({ body: { secret } });
     const verified = await request("/api/auth/two-factor/verify-totp", cookie, {
       code: generated.code,
@@ -317,20 +326,22 @@ describe("two-factor production wiring", () => {
         userId,
       ),
     ]);
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
 
     const rejected = await signIn("wrong password");
     expect(rejected.status).toBe(401);
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
 
     const recovered = await signInForm(password);
     expect(recovered.status, await recovered.clone().text()).toBe(200);
     const recoveredCookie = sessionCookie(recovered);
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe("disabled");
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("disabled");
     const account = await createApp().request(
       "http://localhost:8787/api/dashboard/session",
       { headers: { cookie: recoveredCookie } },
@@ -358,9 +369,9 @@ describe("two-factor production wiring", () => {
         'INSERT INTO "twoFactor" (id, secret, backupCodes, userId, verified) VALUES (?, ?, ?, ?, 0)',
       ).bind("pending-factor", "pending-secret", "codes", userId),
     ]);
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
 
     const challenged = await signIn(password);
 
@@ -368,9 +379,9 @@ describe("two-factor production wiring", () => {
     expect(await challenged.json()).toMatchObject({
       twoFactorRedirect: true,
     });
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
     expect(
       await bindings.AUTH_DB.prepare(
         'SELECT COUNT(*) AS "count" FROM "twoFactor" WHERE "userId" = ?',

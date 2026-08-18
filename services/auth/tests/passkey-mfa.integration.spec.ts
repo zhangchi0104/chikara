@@ -1,13 +1,16 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 import { createTestPasskey, type TestPasskey } from "./webauthn-fixture.js";
 
 const email = "passkey-member@example.com";
 const password = "another secure password";
 const origin = "http://localhost:4321";
+const openAuth = (bindings: AuthBindings) =>
+  Effect.runPromise(createTestAuth(bindings));
 
 async function signUp(
   bindings: AuthBindings,
@@ -16,7 +19,7 @@ async function signUp(
     password,
   },
 ): Promise<string> {
-  const response = await (await createAuth(bindings)).handler(
+  const response = await (await openAuth(bindings)).handler(
     new Request("http://localhost:8787/api/auth/sign-up/email", {
       body: JSON.stringify({
         email: account.email,
@@ -76,7 +79,7 @@ function responseCookies(...responses: ReadonlyArray<Response>): string {
 }
 
 async function passwordSignIn(bindings: AuthBindings): Promise<Response> {
-  return (await createAuth(bindings)).handler(
+  return (await openAuth(bindings)).handler(
     new Request("http://localhost:8787/api/auth/sign-in/email", {
       body: JSON.stringify({ email, password }),
       headers: { "content-type": "application/json", origin },
@@ -89,7 +92,7 @@ async function authenticationChallenge(
   bindings: AuthBindings,
   cookie: string,
 ): Promise<{ readonly challenge: string; readonly response: Response }> {
-  const response = await (await createAuth(bindings)).handler(
+  const response = await (await openAuth(bindings)).handler(
     new Request(
       "http://localhost:8787/api/auth/passkey/generate-authenticate-options",
       { headers: { cookie, origin } },
@@ -113,7 +116,7 @@ async function verifyPasskey(
   cookie: string,
   response: object,
 ): Promise<Response> {
-  return (await createAuth(bindings)).handler(
+  return (await openAuth(bindings)).handler(
     new Request(
       "http://localhost:8787/api/auth/passkey/verify-authentication",
       {
@@ -130,7 +133,7 @@ async function verifyTwoFactor(
   cookie: string,
   method: "verify-backup-code" | "verify-totp",
 ): Promise<Response> {
-  return (await createAuth(bindings)).handler(
+  return (await openAuth(bindings)).handler(
     new Request(`http://localhost:8787/api/auth/two-factor/${method}`, {
       body: JSON.stringify({ code: "unused-code" }),
       headers: { cookie, "content-type": "application/json", origin },
@@ -195,7 +198,7 @@ describe("passkey multi-factor authentication", () => {
     const userId = await signUp(bindings);
     await addPasskey(bindings, userId);
     const challenged = await passwordSignIn(bindings);
-    const response = await (await createAuth(bindings)).handler(
+    const response = await (await openAuth(bindings)).handler(
       new Request(
         "http://localhost:8787/api/auth/passkey/generate-authenticate-options",
         {
@@ -210,7 +213,7 @@ describe("passkey multi-factor authentication", () => {
     });
   });
   it("requires user verification for passkey-first sign-in", async () => {
-    const response = await (await createAuth(bindings)).handler(
+    const response = await (await openAuth(bindings)).handler(
       new Request(
         "http://localhost:8787/api/auth/passkey/generate-authenticate-options",
         { headers: { origin } },
@@ -346,7 +349,7 @@ describe("passkey multi-factor authentication", () => {
       user: { id: userId },
     });
 
-    const replay = await (await createAuth(bindings)).handler(
+    const replay = await (await openAuth(bindings)).handler(
       new Request(
         "http://localhost:8787/api/auth/passkey/generate-authenticate-options",
         { headers: { cookie: challengeCookie, origin } },

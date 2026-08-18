@@ -5,14 +5,15 @@ import EmptyState from "../components/EmptyState.astro";
 import Icon from "../components/Icon.astro";
 import ReadError from "../components/ReadError.astro";
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-import { getApis, getApplications, getOauthEndpoints } from "../lib/auth.js";
+import { dashboardQueries } from "../lib/auth.js";
+import { operationLocation } from "../lib/dashboard-operations.js";
 import { formatDate, type Api, type Application } from "../lib/models.js";
 
 const superuser = Astro.locals.account.user;
 const [applicationResult, apiResult, endpointResult] = await Promise.all([
-  getApplications(Astro.request),
-  getApis(Astro.request),
-  getOauthEndpoints(Astro.request),
+  dashboardQueries.applications(Astro.request),
+  dashboardQueries.apis(Astro.request),
+  dashboardQueries.oauthEndpoints(Astro.request),
 ]);
 const apiFilter = Astro.url.searchParams.get("api");
 const loadFailed = !applicationResult.data || !apiResult.data;
@@ -53,8 +54,8 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
             <div class="button-row">
               <button class="button button-small" type="button" data-test-auth data-authorization-url={oauthEndpoints?.authorizationUrl} data-client-id={selected.clientId} data-redirect-uri={selected.redirectUris[0]} disabled={!oauthEndpoints || selected.disabled} title={selected.disabled ? "Enable this Application to test its auth flow." : "Open the authorization flow in a new tab."}>Test auth flow</button>
               <button class="button button-small" type="button" data-open-dialog={`edit-application-${selected.clientId}`}>Edit</button>
-              {!selected.disabled && selected.type === "web" && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}/rotate`} data-confirm="Rotate this credential? The current value will stop working immediately."><Icon name="key" />Rotate</button>}
-              <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/applications/${selected.clientId}`} data-method="DELETE" data-confirm={`Permanently delete ${selected.name}? Existing sign-ins will fail.`}>Delete</button>
+              {!selected.disabled && selected.type === "web" && <button class="button button-small" type="button" data-operation="rotate-application" data-resource-id={selected.clientId} data-confirm="Rotate this credential? The current value will stop working immediately."><Icon name="key" />Rotate</button>}
+              <button class="button button-small button-danger" type="button" data-operation="delete-application" data-resource-id={selected.clientId} data-confirm={`Permanently delete ${selected.name}? Existing sign-ins will fail.`}>Delete</button>
             </div>
           </header>
           <section class="detail-section">
@@ -94,8 +95,7 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
 
   {apis.length > 0 && (
     <Dialog id="create-application" title="Create Application" description="Register an OAuth Application and assign the API it can call.">
-      <form action="/actions/dashboard/applications" method="post" data-enhance>
-        <input type="hidden" name="_returnTo" value={listHref} />
+      <form action={operationLocation("create-application", { returnTo: listHref })} method="post" data-enhance>
         <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Customer Portal" /></label>
         <div class="form-grid">
           <label class="field"><span>API</span><select name="apiId" required>{apis.map((api) => <option value={api.id} selected={api.id === apiFilter}>{api.name}</option>)}</select></label>
@@ -108,10 +108,7 @@ const listHref = apiFilter ? `/applications?api=${encodeURIComponent(apiFilter)}
   )}
   {selected && (
     <Dialog id={`edit-application-${selected.clientId}`} title="Edit Application" description="Update routing, API assignment, or availability.">
-      <form action={`/actions/dashboard/applications/${selected.clientId}`} method="post" data-enhance>
-        <input type="hidden" name="_method" value="PATCH" />
-        <input type="hidden" name="_returnTo" value={selectionHref(selected.clientId)} />
-        <input type="hidden" name="_boolean" value="disabled" />
+      <form action={operationLocation("update-application", { resourceId: selected.clientId, returnTo: selectionHref(selected.clientId) })} method="post" data-enhance>
         <label class="field"><span>Name</span><input name="name" value={selected.name} required maxlength="100" /></label>
         <label class="field"><span>API</span><select name="apiId" required>{apis.map((api) => <option value={api.id} selected={api.id === selected.apiId}>{api.name}</option>)}</select></label>
         <label class="field"><span>Allowed callback URLs</span><textarea name="redirectUris" required>{selected.redirectUris.join("\n")}</textarea></label>

@@ -1,36 +1,9 @@
-import {
-  browserSupportsWebAuthn,
-  startRegistration,
-} from "@simplewebauthn/browser";
-import {
-  accountProtection,
-  authenticatorStateChangedEvent,
-} from "../lib/account-protection.js";
-import type { TwoFactorState } from "../lib/models.js";
-import {
-  type PasskeySummary,
-  passkeyError,
-  passkeyList,
-  registrationOptions,
-  registrationResponseBody,
-} from "../lib/passkey.js";
-import { twoFactorState } from "../lib/two-factor.js";
-import { elementFinder, requestJSON } from "./browser.js";
+import type {
+  AccountSecuritySnapshot,
+  AccountSecurityWorkflow,
+} from "../lib/account-security.js";
 import { hideDialog, showDialog } from "./dialog.js";
-
-const required = elementFinder("Passkey management");
-
-const passkeyRequest = (endpoint: string, body?: object) =>
-  requestJSON(endpoint, {
-    ...(body ? { body } : {}),
-    failureMessage: (value, response) =>
-      passkeyError(
-        value,
-        response.status === 401
-          ? "Your session is no longer fresh. Sign in again before changing passkeys."
-          : "The passkey change could not be completed.",
-      ),
-  });
+import { required } from "./security-form.js";
 
 function formInput(form: HTMLFormElement, name: string): HTMLInputElement {
   const input = form.elements.namedItem(name);
@@ -49,12 +22,9 @@ function ceremonyMessage(error: unknown): string {
     : "The passkey change could not be completed.";
 }
 
-class PasskeyManager {
-  #authenticatorState: TwoFactorState;
+export class PasskeyPanel {
   readonly #empty: HTMLElement;
   readonly #list: HTMLElement;
-  readonly #mfaBadge: HTMLElement;
-  readonly #mfaStatus: HTMLElement;
   readonly #registerDialog: HTMLDialogElement;
   readonly #registerError: HTMLElement;
   readonly #registerForm: HTMLFormElement;
@@ -62,29 +32,15 @@ class PasskeyManager {
   readonly #renameDialog: HTMLDialogElement;
   readonly #renameError: HTMLElement;
   readonly #renameForm: HTMLFormElement;
-  readonly #root: HTMLElement;
   readonly #status: HTMLElement;
   readonly #support: HTMLElement;
-  #passkeyCount: number;
-  #passkeys: ReadonlyArray<PasskeySummary> = [];
 
-  constructor(root: HTMLElement) {
-    const authenticatorState = twoFactorState(root.dataset.authenticatorState);
-    const passkeyCount = Number(root.dataset.passkeyCount);
-    if (
-      !authenticatorState ||
-      !Number.isSafeInteger(passkeyCount) ||
-      passkeyCount < 0
-    ) {
-      throw new Error("Account protection state is invalid.");
-    }
-    this.#authenticatorState = authenticatorState;
-    this.#passkeyCount = passkeyCount;
-    this.#root = root;
+  constructor(
+    root: HTMLElement,
+    private readonly workflow: AccountSecurityWorkflow,
+  ) {
     this.#empty = required(root, "[data-passkey-empty]");
     this.#list = required(root, "[data-passkey-list]");
-    this.#mfaBadge = required(root, "[data-mfa-badge]");
-    this.#mfaStatus = required(root, "[data-mfa-status]");
     this.#registerForm = required(root, "[data-passkey-register-form]");
     this.#renameForm = required(root, "[data-passkey-rename-form]");
     this.#registerTrigger = required(root, "[data-passkey-register-trigger]");
@@ -111,8 +67,7 @@ class PasskeyManager {
   }
 
   initialize(): void {
-    const supportsRegistration = browserSupportsWebAuthn();
-    if (!supportsRegistration) {
+    if (!this.workflow.supportsPasskeys()) {
       this.#support.textContent = "Unavailable";
       this.#support.classList.add("neutral");
       this.#registerTrigger.disabled = true;
@@ -126,17 +81,9 @@ class PasskeyManager {
         void this.register();
       });
     }
-    this.renderProtection();
     this.#renameForm.addEventListener("submit", (event) => {
       event.preventDefault();
       void this.rename();
-    });
-    this.#root.addEventListener(authenticatorStateChangedEvent, (event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const state = twoFactorState(event.detail);
-      if (!state || state === this.#authenticatorState) return;
-      this.#authenticatorState = state;
-      this.renderProtection();
     });
     this.#list.addEventListener("click", (event) => {
       const target = event.target;
@@ -146,6 +93,7 @@ class PasskeyManager {
       const remove = target.closest<HTMLButtonElement>("[data-passkey-delete]");
       if (remove?.dataset.passkeyId) void this.remove(remove);
     });
+    this.workflow.subscribe(() => this.render(this.workflow.current));
     void this.load();
   }
 
@@ -165,32 +113,31 @@ class PasskeyManager {
   private async load(): Promise<void> {
     this.setStatus("Loading your passkeys…", "pending");
     try {
-      const passkeys = passkeyList(
-        await passkeyRequest("/api/auth/passkey/list-user-passkeys"),
-      );
-      if (!passkeys) {
-        throw new Error("The passkey list response was incomplete.");
-      }
-      this.#passkeys = passkeys;
-      this.#passkeyCount = passkeys.length;
-      this.render();
-      this.setStatus(
-        passkeys.length
-          ? `${passkeys.length} ${passkeys.length === 1 ? "passkey is" : "passkeys are"} ready for sign-in.`
-          : "No passkeys are registered yet.",
-        "ready",
-      );
+      await this.workflow.loadPasskeys();
     } catch (error) {
       this.setStatus(ceremonyMessage(error), "error");
     }
   }
 
-  private render(): void {
-    this.renderProtection();
-    this.#empty.hidden = this.#passkeys.length > 0;
-    this.#list.hidden = this.#passkeys.length === 0;
+  private render(snapshot: AccountSecuritySnapshot): void {
+    if (snapshot.passkeyListState === "unloaded") return;
+    if (snapshot.passkeyListState === "stale") {
+      this.setStatus(
+        "The change was saved, but the latest passkey list could not be loaded. Reload to try again.",
+        "error",
+      );
+    } else {
+      this.setStatus(
+        snapshot.passkeys.length
+          ? `${snapshot.passkeys.length} ${snapshot.passkeys.length === 1 ? "passkey is" : "passkeys are"} ready for sign-in.`
+          : "No passkeys are registered yet.",
+        "ready",
+      );
+    }
+    this.#empty.hidden = snapshot.passkeys.length > 0;
+    this.#list.hidden = snapshot.passkeys.length === 0;
     this.#list.replaceChildren(
-      ...this.#passkeys.map((passkey, index) => {
+      ...snapshot.passkeys.map((passkey, index) => {
         const item = document.createElement("li");
         item.className = "security-list-item";
         const copy = document.createElement("span");
@@ -228,19 +175,6 @@ class PasskeyManager {
     );
   }
 
-  private renderProtection(): void {
-    const presentation = accountProtection(
-      this.#passkeyCount,
-      this.#authenticatorState,
-    );
-    this.#mfaBadge.textContent = presentation.badge;
-    this.#mfaBadge.classList.toggle("warning", presentation.tone === "warning");
-    if (this.#mfaStatus.textContent !== presentation.message) {
-      this.#mfaStatus.textContent = presentation.message;
-    }
-    this.#mfaStatus.dataset.state = presentation.tone;
-  }
-
   private async register(): Promise<void> {
     const submit = required<HTMLButtonElement>(
       this.#registerForm,
@@ -250,22 +184,9 @@ class PasskeyManager {
     this.#registerError.hidden = true;
     submit.disabled = true;
     try {
-      const options = registrationOptions(
-        await passkeyRequest("/api/auth/passkey/generate-register-options"),
-      );
-      if (!options) {
-        throw new Error("The passkey setup challenge was incomplete.");
-      }
-      const credential = await startRegistration({ optionsJSON: options });
-      await passkeyRequest("/api/auth/passkey/verify-registration", {
-        ...(name ? { name } : {}),
-        response: registrationResponseBody(credential),
-      });
-      this.#passkeyCount += 1;
-      this.renderProtection();
+      await this.workflow.registerPasskey(name);
       this.#registerForm.reset();
       hideDialog(this.#registerDialog);
-      await this.load();
     } catch (error) {
       this.showFormError(this.#registerError, ceremonyMessage(error));
     } finally {
@@ -287,14 +208,14 @@ class PasskeyManager {
       this.#renameForm,
       'button[type="submit"]',
     );
-    const id = formInput(this.#renameForm, "id").value;
-    const name = formInput(this.#renameForm, "name").value.trim();
     this.#renameError.hidden = true;
     submit.disabled = true;
     try {
-      await passkeyRequest("/api/auth/passkey/update-passkey", { id, name });
+      await this.workflow.renamePasskey(
+        formInput(this.#renameForm, "id").value,
+        formInput(this.#renameForm, "name").value.trim(),
+      );
       hideDialog(this.#renameDialog);
-      await this.load();
     } catch (error) {
       this.showFormError(this.#renameError, ceremonyMessage(error));
     } finally {
@@ -303,31 +224,19 @@ class PasskeyManager {
   }
 
   private async remove(button: HTMLButtonElement): Promise<void> {
-    if (!button.dataset.passkeyId) return;
+    const id = button.dataset.passkeyId;
     if (
+      !id ||
       !window.confirm("Delete this passkey? It will stop working immediately.")
     ) {
       return;
     }
     button.disabled = true;
     try {
-      await passkeyRequest("/api/auth/passkey/delete-passkey", {
-        id: button.dataset.passkeyId,
-      });
-      this.#passkeys = this.#passkeys.filter(
-        (passkey) => passkey.id !== button.dataset.passkeyId,
-      );
-      this.#passkeyCount = Math.max(0, this.#passkeyCount - 1);
-      this.render();
-      await this.load();
+      await this.workflow.deletePasskey(id);
     } catch (error) {
       this.setStatus(ceremonyMessage(error), "error");
       button.disabled = false;
     }
   }
 }
-
-const securityPage = document.querySelector<HTMLElement>(
-  "[data-security-page]",
-);
-if (securityPage) new PasskeyManager(securityPage).initialize();

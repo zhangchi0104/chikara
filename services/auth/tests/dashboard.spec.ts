@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
 import { createIdentifier, digest } from "../src/dashboard/dashboard.crypto.js";
 import { DashboardError } from "../src/dashboard/dashboard.error.js";
 import {
@@ -9,15 +10,17 @@ import {
 } from "../src/dashboard/dashboard.input.js";
 
 describe("auth dashboard", () => {
-  it("hashes bootstrap values without retaining the input", async () => {
-    const value = "chikara_bootstrap_example_value";
-    const first = await digest(value);
-    const second = await digest(value);
+  it.effect("hashes bootstrap values without retaining the input", () =>
+    Effect.gen(function* () {
+      const value = "chikara_bootstrap_example_value";
+      const first = yield* digest(value);
+      const second = yield* digest(value);
 
-    expect(first).toBe(second);
-    expect(first).not.toContain(value);
-    expect(first).toMatch(/^[\w-]+$/);
-  });
+      expect(first).toBe(second);
+      expect(first).not.toContain(value);
+      expect(first).toMatch(/^[\w-]+$/);
+    }),
+  );
 
   it("creates prefixed random identifiers", () => {
     const first = createIdentifier("chikara_");
@@ -27,56 +30,70 @@ describe("auth dashboard", () => {
     expect(second).not.toBe(first);
   });
 
-  it("validates dashboard input at the auth boundary", () => {
-    const input = {
-      identifier: "https://api.example.com",
-      name: " Core API ",
-      redirectUris: ["https://app.example.com/callback"],
-    };
+  it.effect("validates dashboard input at the auth boundary", () =>
+    Effect.gen(function* () {
+      const input = {
+        identifier: "https://api.example.com",
+        name: " Core API ",
+        redirectUris: ["https://app.example.com/callback"],
+      };
 
-    expect(requiredString(input, "name")).toBe("Core API");
-    expect(requiredUrl(input, "identifier")).toBe("https://api.example.com/");
-    expect(urlList(input, "redirectUris")).toEqual([
-      "https://app.example.com/callback",
-    ]);
-  });
+      expect(yield* requiredString(input, "name")).toBe("Core API");
+      expect(yield* requiredUrl(input, "identifier")).toBe(
+        "https://api.example.com/",
+      );
+      expect(yield* urlList(input, "redirectUris")).toEqual([
+        "https://app.example.com/callback",
+      ]);
+    }),
+  );
 
-  it("rejects non-http API identifiers", () => {
-    expect(() =>
-      requiredUrl({ identifier: "urn:chikara:api" }, "identifier"),
-    ).toThrow(DashboardError);
-  });
+  it.effect("rejects non-http API identifiers", () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(
+        requiredUrl({ identifier: "urn:chikara:api" }, "identifier"),
+      );
+      expect(error).toBeInstanceOf(DashboardError);
+    }),
+  );
 
-  it("accepts custom schemes for native application callbacks", () => {
-    expect(
-      urlList(
+  it.effect("accepts custom schemes for native application callbacks", () =>
+    Effect.gen(function* () {
+      const urls = yield* urlList(
         {
           redirectUris: ["chikara://", "http://localhost:8081/callback"],
         },
         "redirectUris",
-      ),
-    ).toEqual(["chikara://", "http://localhost:8081/callback"]);
-  });
+      );
+      expect(urls).toEqual(["chikara://", "http://localhost:8081/callback"]);
+    }),
+  );
 
-  it("rejects unsafe application callbacks", () => {
-    for (const redirectUri of [
-      "javascript:alert(1)",
-      "https://app.example.com/callback#fragment",
-      "http://app.example.com/callback",
-      "not a URL",
-    ]) {
-      expect(() =>
-        urlList({ redirectUris: [redirectUri] }, "redirectUris"),
-      ).toThrow(DashboardError);
-    }
-  });
+  it.effect("rejects unsafe application callbacks", () =>
+    Effect.gen(function* () {
+      for (const redirectUri of [
+        "javascript:alert(1)",
+        "https://app.example.com/callback#fragment",
+        "http://app.example.com/callback",
+        "not a URL",
+      ]) {
+        const error = yield* Effect.flip(
+          urlList({ redirectUris: [redirectUri] }, "redirectUris"),
+        );
+        expect(error).toBeInstanceOf(DashboardError);
+      }
+    }),
+  );
 
-  it("normalizes and validates email addresses", () => {
-    expect(requiredEmail({ email: " Admin@Example.com " }, "email")).toBe(
-      "admin@example.com",
-    );
-    expect(() => requiredEmail({ email: "not-an-email" }, "email")).toThrow(
-      DashboardError,
-    );
-  });
+  it.effect("normalizes and validates email addresses", () =>
+    Effect.gen(function* () {
+      expect(
+        yield* requiredEmail({ email: " Admin@Example.com " }, "email"),
+      ).toBe("admin@example.com");
+      const error = yield* Effect.flip(
+        requiredEmail({ email: "not-an-email" }, "email"),
+      );
+      expect(error).toBeInstanceOf(DashboardError);
+    }),
+  );
 });

@@ -1,9 +1,10 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createAuth } from "../src/auth.js";
+import { readTwoFactorState } from "../src/account-protection.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
-import { readTwoFactorState } from "../src/two-factor.state.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 
 const email = "recovery@example.com";
 const password = "another secure password";
@@ -38,7 +39,9 @@ describe("two-factor state recovery", () => {
     );
     bindings = await miniflare.getBindings<AuthBindings>();
     await applyAuthMigrations(bindings.AUTH_DB);
-    const signedUp = await (await createAuth(bindings)).handler(
+    const signedUp = await (
+      await Effect.runPromise(createTestAuth(bindings))
+    ).handler(
       new Request("http://localhost:8787/api/auth/sign-up/email", {
         body: JSON.stringify({ email, name: "Recovery Member", password }),
         headers: {
@@ -60,7 +63,9 @@ describe("two-factor state recovery", () => {
 
     const enabled = await post("/api/auth/two-factor/enable", { password });
     expect(enabled.status, await enabled.clone().text()).toBe(200);
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe("pending");
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("pending");
   });
 
   afterEach(async () => {
@@ -68,7 +73,7 @@ describe("two-factor state recovery", () => {
   });
 
   async function post(path: string, body: object): Promise<Response> {
-    return (await createAuth(bindings)).handler(
+    return (await Effect.runPromise(createTestAuth(bindings))).handler(
       new Request(`http://localhost:8787${path}`, {
         body: JSON.stringify(body),
         headers: {
@@ -90,7 +95,9 @@ describe("two-factor state recovery", () => {
     const disabled = await post("/api/auth/two-factor/disable", { password });
     expect(disabled.status, await disabled.clone().text()).toBe(200);
     expect(await disabled.json()).toEqual({ status: true });
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe("disabled");
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("disabled");
   }
 
   it("resets a pending enrollment after confirming the password", async () => {
@@ -103,9 +110,9 @@ describe("two-factor state recovery", () => {
     )
       .bind(userId)
       .run();
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
     await expectPasswordConfirmedReset();
   });
 
@@ -115,9 +122,9 @@ describe("two-factor state recovery", () => {
     )
       .bind(userId)
       .run();
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
     await expectPasswordConfirmedReset();
   });
 
@@ -130,9 +137,9 @@ describe("two-factor state recovery", () => {
     )
       .bind(userId)
       .run();
-    expect(await readTwoFactorState(bindings.AUTH_DB, userId)).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(bindings.AUTH_DB, userId)),
+    ).toBe("inconsistent");
     await expectPasswordConfirmedReset();
   });
 });

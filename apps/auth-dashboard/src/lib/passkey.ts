@@ -111,14 +111,10 @@ export function passkeyList(
 export function passkeyError(value: unknown, fallback: string): string {
   const item = record(value);
   const nested = record(item?.error);
-  const message =
-    typeof item?.message === "string"
-      ? item.message
-      : typeof nested?.message === "string"
-        ? nested.message
-        : typeof item?.error === "string"
-          ? item.error
-          : undefined;
+  let message: string | undefined;
+  if (typeof item?.message === "string") message = item.message;
+  else if (typeof nested?.message === "string") message = nested.message;
+  else if (typeof item?.error === "string") message = item.error;
   return message?.trim().slice(0, 240) || fallback;
 }
 

@@ -1,3 +1,6 @@
+import { Effect } from "effect";
+import { runtimePromise } from "../auth-runtime.effect.js";
+
 const encoder = new TextEncoder();
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -9,9 +12,10 @@ function bytesToBase64Url(bytes: Uint8Array): string {
     .replace(/=+$/, "");
 }
 
-export async function digest(value: string): Promise<string> {
-  const result = await crypto.subtle.digest("SHA-256", encoder.encode(value));
-  return bytesToBase64Url(new Uint8Array(result));
+export function digest(value: string) {
+  return runtimePromise("hash dashboard value", () =>
+    crypto.subtle.digest("SHA-256", encoder.encode(value)),
+  ).pipe(Effect.map((result) => bytesToBase64Url(new Uint8Array(result))));
 }
 
 export function createIdentifier(prefix: string): string {

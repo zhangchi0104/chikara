@@ -4,11 +4,12 @@ import EmptyState from "../components/EmptyState.astro";
 import Icon from "../components/Icon.astro";
 import ReadError from "../components/ReadError.astro";
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-import { getUsers } from "../lib/auth.js";
+import { dashboardQueries } from "../lib/auth.js";
+import { operationLocation } from "../lib/dashboard-operations.js";
 import { formatDate, initials, type User } from "../lib/models.js";
 
 const superuser = Astro.locals.account.user;
-const result = await getUsers(Astro.request);
+const result = await dashboardQueries.users(Astro.request);
 const loadFailed = !result.data;
 const users: ReadonlyArray<User> = result.data ?? [];
 ---
@@ -38,8 +39,8 @@ const users: ReadonlyArray<User> = result.data ?? [];
                     <div class="row-actions">
                       <a class="button button-small" href={`/users/${encodeURIComponent(user.id)}`}>View profile</a>
                       <button class="button button-small" type="button" data-open-dialog="edit-user" data-edit-user data-user-id={user.id} data-user-name={user.name} data-user-email={user.email}>Edit</button>
-                      {user.id !== superuser.id && <button class="button button-small" type="button" data-endpoint={`/api/dashboard/users/${user.id}/revoke-sessions`} data-confirm={`Revoke every active session for ${user.name}?`}>Revoke sessions</button>}
-                      {user.id !== superuser.id && <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/users/${user.id}`} data-method="DELETE" data-confirm={`Permanently delete ${user.name}? This cannot be undone.`}>Delete</button>}
+                      {user.id !== superuser.id && <button class="button button-small" type="button" data-operation="revoke-user-sessions" data-resource-id={user.id} data-confirm={`Revoke every active session for ${user.name}?`}>Revoke sessions</button>}
+                      {user.id !== superuser.id && <button class="button button-small button-danger" type="button" data-operation="delete-user" data-resource-id={user.id} data-confirm={`Permanently delete ${user.name}? This cannot be undone.`}>Delete</button>}
                     </div>
                   </td>
                 </tr>
@@ -52,8 +53,7 @@ const users: ReadonlyArray<User> = result.data ?? [];
   </section>}
 
   <Dialog id="create-user" title="Create user" description="Add an account that can authenticate with Otakuma Auth.">
-    <form action="/actions/dashboard/users" method="post" data-enhance>
-      <input type="hidden" name="_returnTo" value="/users" />
+    <form action={operationLocation("create-user", { returnTo: "/users" })} method="post" data-enhance>
       <div class="form-grid">
         <label class="field"><span>Full name</span><input name="name" required maxlength="100" /></label>
         <label class="field"><span>Email</span><input name="email" type="email" required maxlength="320" /></label>
@@ -63,9 +63,7 @@ const users: ReadonlyArray<User> = result.data ?? [];
     </form>
   </Dialog>
   <Dialog id="edit-user" title="Edit user" description="Update the account's profile information.">
-    <form action="/actions/dashboard/users" method="post" data-enhance data-user-edit-form>
-      <input type="hidden" name="_method" value="PATCH" />
-      <input type="hidden" name="_returnTo" value="/users" />
+    <form action={operationLocation("update-user", { resourceId: superuser.id, returnTo: "/users" })} method="post" data-enhance data-user-edit-form>
       <label class="field"><span>Full name</span><input name="name" required maxlength="100" /></label>
       <label class="field"><span>Email</span><input name="email" type="email" required maxlength="320" /></label>
       <div class="dialog-actions"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Save changes</button></div>

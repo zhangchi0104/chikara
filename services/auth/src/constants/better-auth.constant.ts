@@ -2,7 +2,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import type { BetterAuthOptions } from "better-auth";
 import { admin, jwt, twoFactor } from "better-auth/plugins";
-import { Redacted } from "effect";
+import { Effect, Redacted } from "effect";
 import type { AuthConfig } from "../configs/auth.config.js";
 import {
   assertPasskeyMfaCredential,
@@ -49,10 +49,12 @@ export function createAuthOptions(
       passkey({
         authentication: {
           afterVerification: async ({ clientData, ctx, verification }) => {
-            await assertPasskeyMfaCredential(
-              ctx,
-              clientData.id,
-              verification.authenticationInfo.userVerified,
+            await Effect.runPromise(
+              assertPasskeyMfaCredential(
+                ctx,
+                clientData.id,
+                verification.authenticationInfo.userVerified,
+              ),
             );
           },
         },

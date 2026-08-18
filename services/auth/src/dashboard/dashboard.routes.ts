@@ -1,34 +1,27 @@
 import { Effect } from "effect";
 import { Hono } from "hono";
+import type { AuthFactory } from "../auth.js";
 import type { AuthBindings } from "../configs/auth.config.js";
+import { protectedResourceLayer } from "../protected-resource.provider.js";
 import {
-  createApi,
-  listApis,
-  removeApi,
-  updateApi,
-} from "./dashboard.api-store.js";
-import {
-  createApplication,
-  listApplications,
-  removeApplication,
-  rotateApplicationCredential,
-  updateApplication,
-} from "./dashboard.application-store.js";
+  type ProtectedResourceServices,
+  protectedResourceAuthorization,
+} from "../protected-resource-authorization.js";
 import {
   bootstrapSuperuser,
   getAccountSession,
   isBootstrapped,
   requireSuperuser,
 } from "./dashboard.auth.js";
-import { DashboardError, DashboardStorageError } from "./dashboard.error.js";
+import { DashboardError } from "./dashboard.error.js";
 import {
-  applicationType,
-  optionalString,
-  readJson,
-  requiredEmail,
-  requiredString,
-  requiredUrl,
-  urlList,
+  decodeActivityCursor,
+  decodeApiInput,
+  decodeBootstrapInput,
+  decodeCreateApplicationInput,
+  decodeCreateUserInput,
+  decodeUpdateApplicationInput,
+  decodeUpdateUserInput,
 } from "./dashboard.input.js";
 import {
   createUser,
@@ -39,32 +32,13 @@ import {
   updateUser,
 } from "./dashboard.user-store.js";
 
-function activityCursor(request: Request) {
-  const url = new URL(request.url);
-  const occurredAtValue = url.searchParams.get("before");
-  const id = url.searchParams.get("beforeId");
-  if (occurredAtValue === null && id === null) return undefined;
-  const occurredAt = Number(occurredAtValue);
-  if (
-    occurredAtValue === null ||
-    id === null ||
-    !id ||
-    !Number.isSafeInteger(occurredAt) ||
-    occurredAt < 0
-  ) {
-    throw new DashboardError(400, "The activity cursor is invalid.");
-  }
-  return { id, occurredAt };
-}
-
-function promiseEffect<A>(task: () => Promise<A>) {
-  return Effect.tryPromise({
-    catch: (cause) =>
-      cause instanceof DashboardError || cause instanceof DashboardStorageError
-        ? cause
-        : new DashboardStorageError("request execution", { cause }),
-    try: task,
-  });
+function runDashboard<A, E>(
+  bindings: AuthBindings,
+  operation: Effect.Effect<A, E, AuthFactory | ProtectedResourceServices>,
+) {
+  return Effect.runPromise(
+    operation.pipe(Effect.provide(protectedResourceLayer(bindings))),
+  );
 }
 
 export function createDashboardApp(): Hono<{ Bindings: AuthBindings }> {
@@ -85,201 +59,235 @@ export function createDashboardApp(): Hono<{ Bindings: AuthBindings }> {
   });
 
   app.get("/status", (context) =>
-    Effect.runPromise(
-      promiseEffect(() => isBootstrapped(context.env.AUTH_DB)),
-    ).then((bootstrapped) => context.json({ bootstrapped })),
+    runDashboard(
+      context.env,
+      isBootstrapped(context.env.AUTH_DB).pipe(
+        Effect.map((bootstrapped) => context.json({ bootstrapped })),
+      ),
+    ),
   );
 
-  app.post("/bootstrap", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    const user = await Effect.runPromise(
-      promiseEffect(() =>
-        bootstrapSuperuser(context.env, {
-          email: requiredEmail(input, "email"),
-          name: requiredString(input, "name", { max: 100 }),
-          password: requiredString(input, "password", { min: 12, max: 128 }),
-          token: requiredString(input, "token", { min: 20, max: 256 }),
-        }),
+  app.post("/bootstrap", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeBootstrapInput(context.req.raw);
+        const user = yield* bootstrapSuperuser(context.env, input);
+        return context.json({ user }, 201);
+      }),
+    ),
+  );
+
+  app.get("/session", (context) =>
+    runDashboard(
+      context.env,
+      getAccountSession(context.req.raw, context.env).pipe(
+        Effect.map((account) => context.json(account)),
       ),
-    );
-    return context.json({ user }, 201);
-  });
+    ),
+  );
 
-  app.get("/session", async (context) => {
-    const account = await Effect.runPromise(
-      promiseEffect(() => getAccountSession(context.req.raw, context.env)),
-    );
-    return context.json(account);
-  });
-
-  app.use("/*", async (context, next) => {
-    const user = await Effect.runPromise(
-      promiseEffect(() => requireSuperuser(context.req.raw, context.env)),
-    );
-    context.set("superuser", user);
-    await next();
-  });
+  app.use("/*", (context, next) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const user = yield* requireSuperuser(context.req.raw, context.env);
+        context.set("superuser", user);
+        yield* Effect.promise(next);
+      }),
+    ),
+  );
 
   app.get("/users", (context) =>
-    Effect.runPromise(listUsers(context.env.AUTH_DB)).then((users) =>
-      context.json({ users }),
+    runDashboard(
+      context.env,
+      listUsers(context.env.AUTH_DB).pipe(
+        Effect.map((users) => context.json({ users })),
+      ),
     ),
   );
+
   app.get("/users/:id", (context) =>
-    Effect.runPromise(
-      getUserDetail(
-        context.env.AUTH_DB,
-        context.req.param("id"),
-        activityCursor(context.req.raw),
-      ),
-    ).then((detail) => {
-      context.header("cache-control", "no-store");
-      return context.json(detail);
-    }),
-  );
-  app.post("/users", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    const user = await Effect.runPromise(
-      createUser(context.env, context.req.raw.headers, {
-        email: requiredEmail(input, "email"),
-        name: requiredString(input, "name", { max: 100 }),
-        password: requiredString(input, "password", { min: 12, max: 128 }),
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const cursor = yield* decodeActivityCursor(context.req.raw);
+        const detail = yield* getUserDetail(
+          context.env.AUTH_DB,
+          context.req.param("id"),
+          cursor,
+        );
+        context.header("cache-control", "no-store");
+        return context.json(detail);
       }),
-    );
-    return context.json({ user }, 201);
-  });
-  app.patch("/users/:id", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    await Effect.runPromise(
-      updateUser(
-        context.env,
-        context.req.raw.headers,
-        context.req.param("id"),
-        {
-          email: requiredEmail(input, "email"),
-          name: requiredString(input, "name", { max: 100 }),
-        },
-      ),
-    );
-    return context.json({ ok: true });
-  });
-  app.delete("/users/:id", async (context) => {
-    if (context.req.param("id") === context.get("superuser").id) {
-      throw new DashboardError(
-        409,
-        "The superuser cannot delete their own account.",
-      );
-    }
-    await Effect.runPromise(
-      removeUser(context.env, context.req.raw.headers, context.req.param("id")),
-    );
-    return context.json({ ok: true });
-  });
-  app.post("/users/:id/revoke-sessions", async (context) => {
-    if (context.req.param("id") === context.get("superuser").id) {
-      throw new DashboardError(
-        409,
-        "The superuser cannot revoke their own active access here.",
-      );
-    }
-    await Effect.runPromise(
-      revokeUserSessions(
-        context.env,
-        context.req.raw.headers,
-        context.req.param("id"),
-      ),
-    );
-    return context.json({ ok: true });
-  });
+    ),
+  );
+
+  app.post("/users", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeCreateUserInput(context.req.raw);
+        const user = yield* createUser(context.req.raw.headers, input);
+        return context.json({ user }, 201);
+      }),
+    ),
+  );
+
+  app.patch("/users/:id", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeUpdateUserInput(context.req.raw);
+        yield* updateUser(
+          context.req.raw.headers,
+          context.req.param("id"),
+          input,
+        );
+        return context.json({ ok: true });
+      }),
+    ),
+  );
+
+  app.delete("/users/:id", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const userId = context.req.param("id");
+        if (userId === context.get("superuser").id) {
+          return yield* new DashboardError({
+            message: "The superuser cannot delete their own account.",
+            status: 409,
+          });
+        }
+        yield* removeUser(context.req.raw.headers, userId);
+        return context.json({ ok: true });
+      }),
+    ),
+  );
+
+  app.post("/users/:id/revoke-sessions", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const userId = context.req.param("id");
+        if (userId === context.get("superuser").id) {
+          return yield* new DashboardError({
+            message:
+              "The superuser cannot revoke their own active access here.",
+            status: 409,
+          });
+        }
+        yield* revokeUserSessions(context.req.raw.headers, userId);
+        return context.json({ ok: true });
+      }),
+    ),
+  );
 
   app.get("/apis", (context) =>
-    Effect.runPromise(listApis(context.env.AUTH_DB)).then((apis) =>
-      context.json({ apis }),
+    runDashboard(
+      context.env,
+      protectedResourceAuthorization.listApis.pipe(
+        Effect.map((apis) => context.json({ apis })),
+      ),
     ),
   );
-  app.post("/apis", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    const api = await Effect.runPromise(
-      createApi(context.env.AUTH_DB, {
-        description: optionalString(input, "description", 500) ?? "",
-        identifier: requiredUrl(input, "identifier"),
-        name: requiredString(input, "name", { max: 100 }),
+
+  app.post("/apis", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeApiInput(context.req.raw);
+        const api = yield* protectedResourceAuthorization.createApi(input);
+        return context.json({ api }, 201);
       }),
-    );
-    return context.json({ api }, 201);
-  });
-  app.patch("/apis/:id", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    await Effect.runPromise(
-      updateApi(context.env.AUTH_DB, context.req.param("id"), {
-        description: optionalString(input, "description", 500) ?? "",
-        identifier: requiredUrl(input, "identifier"),
-        name: requiredString(input, "name", { max: 100 }),
+    ),
+  );
+
+  app.patch("/apis/:id", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeApiInput(context.req.raw);
+        yield* protectedResourceAuthorization.updateApi(
+          context.req.param("id"),
+          input,
+        );
+        return context.json({ ok: true });
       }),
-    );
-    return context.json({ ok: true });
-  });
-  app.delete("/apis/:id", async (context) => {
-    await Effect.runPromise(
-      removeApi(context.env.AUTH_DB, context.req.param("id")),
-    );
-    return context.json({ ok: true });
-  });
+    ),
+  );
+
+  app.delete("/apis/:id", (context) =>
+    runDashboard(
+      context.env,
+      protectedResourceAuthorization
+        .removeApi(context.req.param("id"))
+        .pipe(Effect.map(() => context.json({ ok: true }))),
+    ),
+  );
 
   app.get("/applications", (context) =>
-    Effect.runPromise(listApplications(context.env.AUTH_DB)).then(
-      (applications) => context.json({ applications }),
+    runDashboard(
+      context.env,
+      protectedResourceAuthorization.listApplications.pipe(
+        Effect.map((applications) => context.json({ applications })),
+      ),
     ),
   );
-  app.post("/applications", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    const result = await Effect.runPromise(
-      createApplication(context.env, context.req.raw.headers, {
-        apiId: requiredString(input, "apiId"),
-        name: requiredString(input, "name", { max: 100 }),
-        redirectUris: urlList(input, "redirectUris"),
-        type: applicationType(input),
+
+  app.post("/applications", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeCreateApplicationInput(context.req.raw);
+        const result = yield* protectedResourceAuthorization.createApplication(
+          context.req.raw.headers,
+          input,
+        );
+        return context.json(result, 201);
       }),
-    );
-    return context.json(result, 201);
-  });
-  app.patch("/applications/:clientId", async (context) => {
-    const input = await Effect.runPromise(readJson(context.req.raw));
-    await Effect.runPromise(
-      updateApplication(
-        context.env,
-        context.req.raw.headers,
-        context.req.param("clientId"),
-        {
-          apiId: requiredString(input, "apiId"),
-          disabled: input.disabled === true,
-          name: requiredString(input, "name", { max: 100 }),
-          redirectUris: urlList(input, "redirectUris"),
-        },
-      ),
-    );
-    return context.json({ ok: true });
-  });
-  app.post("/applications/:clientId/rotate", async (context) => {
-    const credential = await Effect.runPromise(
-      rotateApplicationCredential(
-        context.env,
-        context.req.raw.headers,
-        context.req.param("clientId"),
-      ),
-    );
-    return context.json({ credential });
-  });
-  app.delete("/applications/:clientId", async (context) => {
-    await Effect.runPromise(
-      removeApplication(
-        context.env,
-        context.req.raw.headers,
-        context.req.param("clientId"),
-      ),
-    );
-    return context.json({ ok: true });
-  });
+    ),
+  );
+
+  app.patch("/applications/:clientId", (context) =>
+    runDashboard(
+      context.env,
+      Effect.gen(function* () {
+        const input = yield* decodeUpdateApplicationInput(context.req.raw);
+        yield* protectedResourceAuthorization.updateApplication(
+          context.req.raw.headers,
+          context.req.param("clientId"),
+          input,
+        );
+        return context.json({ ok: true });
+      }),
+    ),
+  );
+
+  app.post("/applications/:clientId/rotate", (context) =>
+    runDashboard(
+      context.env,
+      protectedResourceAuthorization
+        .rotateApplication(
+          context.req.raw.headers,
+          context.req.param("clientId"),
+        )
+        .pipe(Effect.map((credential) => context.json({ credential }))),
+    ),
+  );
+
+  app.delete("/applications/:clientId", (context) =>
+    runDashboard(
+      context.env,
+      protectedResourceAuthorization
+        .removeApplication(
+          context.req.raw.headers,
+          context.req.param("clientId"),
+        )
+        .pipe(Effect.map(() => context.json({ ok: true }))),
+    ),
+  );
 
   return app;
 }

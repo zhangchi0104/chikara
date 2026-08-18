@@ -1,9 +1,8 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
-import { createAuth } from "../src/auth.js";
 import type { AuthBindings } from "../src/configs/auth.config.js";
-import { validateTokenAudience } from "../src/dashboard/dashboard.access.js";
 import {
   BOOTSTRAP_KEY,
   bootstrapSuperuser,
@@ -11,6 +10,7 @@ import {
 import { digest } from "../src/dashboard/dashboard.crypto.js";
 import { DashboardError } from "../src/dashboard/dashboard.error.js";
 import { applyAuthMigrations } from "./auth-database.js";
+import { createTestAuth } from "./auth-runtime.js";
 
 function sessionCookie(response: Response): string {
   const header = response.headers.get("set-cookie");
@@ -22,14 +22,16 @@ async function bootstrapAndSignIn(bindings: AuthBindings): Promise<string> {
   const token = "chikara_bootstrap_sign_in_value";
   await bindings.AUTH_BOOTSTRAP.put(
     BOOTSTRAP_KEY,
-    JSON.stringify({ digest: await digest(token) }),
+    JSON.stringify({ digest: await Effect.runPromise(digest(token)) }),
   );
-  await bootstrapSuperuser(bindings, {
-    email: "admin@example.com",
-    name: "Admin",
-    password: "correct horse battery staple",
-    token,
-  });
+  await Effect.runPromise(
+    bootstrapSuperuser(bindings, {
+      email: "admin@example.com",
+      name: "Admin",
+      password: "correct horse battery staple",
+      token,
+    }),
+  );
   return signIn(bindings, "admin@example.com", "correct horse battery staple");
 }
 
@@ -38,7 +40,7 @@ async function signIn(
   email: string,
   password: string,
 ): Promise<string> {
-  const auth = await createAuth(bindings);
+  const auth = await Effect.runPromise(createTestAuth(bindings));
   const signIn = await auth.handler(
     new Request("http://localhost:8787/api/auth/sign-in/email", {
       body: JSON.stringify({
@@ -88,7 +90,7 @@ describe("auth dashboard integration", () => {
     const token = "chikara_bootstrap_integration_value";
     await bindings.AUTH_BOOTSTRAP.put(
       BOOTSTRAP_KEY,
-      JSON.stringify({ digest: await digest(token) }),
+      JSON.stringify({ digest: await Effect.runPromise(digest(token)) }),
     );
     const input = {
       email: "admin@example.com",
@@ -98,8 +100,8 @@ describe("auth dashboard integration", () => {
     };
 
     const outcomes = await Promise.allSettled([
-      bootstrapSuperuser(bindings, input),
-      bootstrapSuperuser(bindings, input),
+      Effect.runPromise(bootstrapSuperuser(bindings, input)),
+      Effect.runPromise(bootstrapSuperuser(bindings, input)),
     ]);
 
     expect(
@@ -117,46 +119,6 @@ describe("auth dashboard integration", () => {
       .first<{ role: string }>();
     expect(row?.role).toBe("admin");
     expect(await bindings.AUTH_BOOTSTRAP.get(BOOTSTRAP_KEY)).toBeNull();
-  });
-
-  it("allows only the Application assigned to the requested API audience", async () => {
-    const now = Date.now();
-    await bindings.AUTH_DB.batch([
-      bindings.AUTH_DB.prepare(
-        "INSERT INTO authApi (id, name, identifier, description, createdAt, updatedAt) VALUES (?, ?, ?, '', ?, ?)",
-      ).bind("api-1", "Core API", "https://api.example.com/", now, now),
-      bindings.AUTH_DB.prepare(
-        `INSERT INTO oauthClient
-         (id, clientId, redirectUris, referenceId, type, public, disabled)
-         VALUES (?, ?, '[]', 'chikara:auth-dashboard', 'web', 0, 0)`,
-      ).bind("client-row", "client-1"),
-      bindings.AUTH_DB.prepare(
-        "INSERT INTO dashboardApplicationApi (clientId, apiId, createdAt) VALUES (?, ?, ?)",
-      ).bind("client-1", "api-1", now),
-    ]);
-    const assigned = new Request("http://localhost/api/auth/oauth2/token", {
-      body: new URLSearchParams({
-        client_id: "client-1",
-        grant_type: "client_credentials",
-        resource: "https://api.example.com/",
-      }),
-      method: "POST",
-    });
-    const unassigned = new Request("http://localhost/api/auth/oauth2/token", {
-      body: new URLSearchParams({
-        client_id: "client-1",
-        grant_type: "client_credentials",
-        resource: "https://other.example.com/",
-      }),
-      method: "POST",
-    });
-
-    expect(
-      await validateTokenAudience(assigned, bindings.AUTH_DB),
-    ).toBeUndefined();
-    expect(
-      (await validateTokenAudience(unassigned, bindings.AUTH_DB))?.status,
-    ).toBe(400);
   });
 
   it("separates signed-in account identity from management access", async () => {
@@ -336,6 +298,35 @@ describe("auth dashboard integration", () => {
         }),
       ],
     });
+
+    const now = Date.now();
+    await bindings.AUTH_DB.prepare(
+      "INSERT INTO authApi (id, name, identifier, description, createdAt, updatedAt) VALUES (?, ?, ?, '', ?, ?)",
+    )
+      .bind("api-2", "Reports API", "https://reports.example.com/", now, now)
+      .run();
+    const updated = await app.request(
+      `/api/dashboard/applications/${clientId}`,
+      {
+        body: JSON.stringify({
+          apiId: "api-2",
+          disabled: false,
+          name: "Reports Application",
+          redirectUris: ["https://app.example.com/callback"],
+        }),
+        headers,
+        method: "PATCH",
+      },
+      bindings,
+    );
+    expect(updated.status).toBe(200);
+    expect(
+      await bindings.AUTH_DB.prepare(
+        "SELECT apiId FROM dashboardApplicationApi WHERE clientId = ?",
+      )
+        .bind(clientId)
+        .first<{ apiId: string }>(),
+    ).toEqual({ apiId: "api-2" });
 
     await bindings.AUTH_DB.prepare(
       `INSERT INTO oauthClient

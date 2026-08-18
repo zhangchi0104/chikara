@@ -1,21 +1,30 @@
-export type DashboardErrorStatus = 400 | 401 | 403 | 404 | 409 | 422;
+import { Schema } from "effect";
 
-export class DashboardError extends Error {
-  readonly status: DashboardErrorStatus;
+const DashboardErrorStatus = Schema.Literals([400, 401, 403, 404, 409, 422]);
 
-  constructor(status: DashboardErrorStatus, message: string) {
-    super(message);
-    this.name = "DashboardError";
-    this.status = status;
-  }
-}
+export type DashboardErrorStatus = typeof DashboardErrorStatus.Type;
 
-export class DashboardStorageError extends Error {
-  constructor(
-    readonly operation: string,
-    options?: ErrorOptions,
-  ) {
-    super(`Dashboard storage failed during ${operation}.`, options);
-    this.name = "DashboardStorageError";
-  }
+export class DashboardError extends Schema.TaggedErrorClass<DashboardError>()(
+  "DashboardError",
+  {
+    message: Schema.String,
+    status: DashboardErrorStatus,
+  },
+) {}
+
+export class DashboardStorageError extends Schema.TaggedErrorClass<DashboardStorageError>()(
+  "DashboardStorageError",
+  {
+    cause: Schema.optional(Schema.Defect()),
+    message: Schema.String,
+    operation: Schema.String,
+  },
+) {}
+
+export function dashboardStorageError(operation: string, cause?: unknown) {
+  return new DashboardStorageError({
+    ...(cause === undefined ? {} : { cause }),
+    message: `Dashboard storage failed during ${operation}.`,
+    operation,
+  });
 }

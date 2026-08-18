@@ -1,14 +1,12 @@
+import { Effect } from "effect";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  coordinatesTwoFactorMutation,
-  recoverableSignInUserId,
-  rejectUnsafeEnrollment,
-} from "../src/two-factor.guard.js";
-import {
+  coordinateAccountProtectionRequest,
+  handleAccountProtectionRequest,
   readTwoFactorState,
   type TwoFactorState,
-} from "../src/two-factor.state.js";
+} from "../src/account-protection.js";
 import { applyAuthMigrations } from "./auth-database.js";
 
 interface StoredFactorState {
@@ -41,7 +39,7 @@ const states: ReadonlyArray<StoredFactorState> = [
   },
 ];
 
-describe("two-factor mutation guard", () => {
+describe("account protection request coordination", () => {
   let miniflare: Miniflare;
   let database: D1Database;
 
@@ -100,39 +98,66 @@ describe("two-factor mutation guard", () => {
       .run();
   }
 
-  it("coordinates only account two-factor mutations", () => {
-    expect(
-      coordinatesTwoFactorMutation(
-        new Request("https://auth.example/api/auth/two-factor/enable", {
-          method: "POST",
+  it("serializes only account-protection mutations", async () => {
+    const forwarded: string[] = [];
+    const serialized: string[] = [];
+    const auth = {
+      forward: (request: Request) =>
+        Effect.sync(() => {
+          forwarded.push(`${request.method} ${new URL(request.url).pathname}`);
+          return Response.json({ status: true });
         }),
-      ),
-    ).toBe(true);
-    expect(
-      coordinatesTwoFactorMutation(
-        new Request("https://auth.example/api/auth/two-factor/verify-totp", {
-          method: "GET",
+      sessionUserId: () => Effect.succeed("member-1"),
+    };
+    const handle = (request: Request) =>
+      Effect.runPromise(
+        handleAccountProtectionRequest(request, {
+          database,
+          openAuth: Effect.succeed(auth),
+          serialize: (userId, serializedRequest) =>
+            Effect.sync(() => {
+              serialized.push(
+                `${userId} ${serializedRequest.method} ${new URL(serializedRequest.url).pathname}`,
+              );
+              return Response.json({ status: true });
+            }),
         }),
-      ),
-    ).toBe(false);
-    expect(
-      coordinatesTwoFactorMutation(
-        new Request("https://auth.example/api/auth/sign-in/email", {
-          method: "POST",
-        }),
-      ),
-    ).toBe(false);
+      );
+
+    await handle(
+      new Request("https://auth.example/api/auth/two-factor/enable", {
+        method: "POST",
+      }),
+    );
+    await handle(
+      new Request("https://auth.example/api/auth/two-factor/verify-totp", {
+        method: "GET",
+      }),
+    );
+    await handle(
+      new Request("https://auth.example/api/auth/sign-in/email", {
+        method: "POST",
+      }),
+    );
+
+    expect(serialized).toEqual(["member-1 POST /api/auth/two-factor/enable"]);
+    expect(forwarded).toEqual([
+      "GET /api/auth/two-factor/verify-totp",
+      "POST /api/auth/sign-in/email",
+    ]);
   });
 
   it.each(states)("classifies $label", async (state) => {
     await storeState(state);
-    expect(await readTwoFactorState(database, "member-1")).toBe(state.expected);
+    expect(
+      await Effect.runPromise(readTwoFactorState(database, "member-1")),
+    ).toBe(state.expected);
   });
 
   it("treats a missing account as inconsistent", async () => {
-    expect(await readTwoFactorState(database, "missing-user")).toBe(
-      "inconsistent",
-    );
+    expect(
+      await Effect.runPromise(readTwoFactorState(database, "missing-user")),
+    ).toBe("inconsistent");
   });
 
   it("rejects a nullable authenticator verification flag", async () => {
@@ -146,7 +171,7 @@ describe("two-factor mutation guard", () => {
     ).rejects.toThrow(/TWO_FACTOR_VERIFICATION_REQUIRED/);
   });
 
-  it("finds a recoverable sign-in from form data using normalized email", async () => {
+  it("serializes a recoverable sign-in using its normalized email", async () => {
     await database
       .prepare(
         'UPDATE "user" SET "email" = ?, "twoFactorEnabled" = 1 WHERE "id" = ?',
@@ -158,7 +183,25 @@ describe("two-factor mutation guard", () => {
       method: "POST",
     });
 
-    expect(await recoverableSignInUserId(request, database)).toBe("member-1");
+    const serialized: string[] = [];
+    const missingUserId = (): string | undefined => undefined;
+    const response = await Effect.runPromise(
+      handleAccountProtectionRequest(request, {
+        database,
+        openAuth: Effect.succeed({
+          forward: () => Effect.succeed(Response.json({ status: true })),
+          sessionUserId: () => Effect.succeed(missingUserId()),
+        }),
+        serialize: (userId) =>
+          Effect.sync(() => {
+            serialized.push(userId);
+            return Response.json({ status: true });
+          }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(serialized).toEqual(["member-1"]);
   });
 
   it.each([
@@ -169,16 +212,21 @@ describe("two-factor mutation guard", () => {
   ])("guards $state.label enrollment with $code", async ({ code, state }) => {
     if (!state) throw new Error("The state fixture is missing.");
     await storeState(state);
-    const guarded = await rejectUnsafeEnrollment(
-      new Request("https://auth.example/api/auth/two-factor/enable", {
-        method: "POST",
-      }),
-      database,
-      "member-1",
+    const guarded = await Effect.runPromise(
+      coordinateAccountProtectionRequest(
+        new Request("https://auth.example/api/auth/two-factor/enable", {
+          method: "POST",
+        }),
+        {
+          database,
+          forward: () => Effect.succeed(Response.json({ status: true })),
+          userId: "member-1",
+        },
+      ),
     );
 
     if (!code) {
-      expect(guarded).toBeUndefined();
+      expect(guarded.status).toBe(200);
       return;
     }
     expect(guarded?.status).toBe(409);

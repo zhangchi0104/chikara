@@ -1,4 +1,8 @@
-export type PublicAuthForwarder = (request: Request) => Promise<Response>;
+import { Effect } from "effect";
+
+export type PublicAuthForwarder = (
+  request: Request,
+) => Effect.Effect<Response, Error>;
 
 interface PublicPageAction {
   readonly forward: PublicAuthForwarder;
@@ -16,12 +20,11 @@ function errorResponse(message: string, status = 400): Response {
   return Response.json({ message }, { status });
 }
 
-async function readForm(request: Request): Promise<FormData | Response> {
-  try {
-    return await request.formData();
-  } catch {
-    return errorResponse("The submitted form could not be read.");
-  }
+function readForm(request: Request) {
+  return Effect.tryPromise({
+    catch: () => errorResponse("The submitted form could not be read."),
+    try: () => request.formData(),
+  }).pipe(Effect.catch(Effect.succeed));
 }
 
 function formString(form: FormData, name: string): string | undefined {
@@ -102,11 +105,11 @@ export function challengeMethods(
   );
 }
 
-async function responsePayload(response: Response): Promise<unknown> {
-  return response
-    .clone()
-    .json()
-    .catch(() => undefined);
+function responsePayload(response: Response) {
+  return Effect.tryPromise({
+    catch: () => undefined,
+    try: () => response.clone().json(),
+  }).pipe(Effect.orElseSucceed(() => undefined));
 }
 
 export function redirectWithCookies(
@@ -134,33 +137,33 @@ function twoFactorLocation(request: Request, payload: unknown): string {
   return url.toString();
 }
 
-export async function handleSignInPageAction(
-  action: PublicPageAction,
-): Promise<Response> {
-  const form = await readForm(action.request);
-  if (form instanceof Response) return form;
-  const email = formString(form, "email");
-  const password = formString(form, "password");
-  if (!email || !password) {
-    return errorResponse("Email and password are required.");
-  }
+export function handleSignInPageAction(action: PublicPageAction) {
+  return Effect.gen(function* () {
+    const form = yield* readForm(action.request);
+    if (form instanceof Response) return form;
+    const email = formString(form, "email");
+    const password = formString(form, "password");
+    if (!email || !password) {
+      return errorResponse("Email and password are required.");
+    }
 
-  const body: Record<string, boolean | string> = {
-    email,
-    password,
-    rememberMe: true,
-  };
-  appendOAuthQuery(body, action.request);
-  const response = await action.forward(
-    authRequest(action.request, "/api/auth/sign-in/email", body),
-  );
-  if (!response.ok) return response;
+    const body: Record<string, boolean | string> = {
+      email,
+      password,
+      rememberMe: true,
+    };
+    appendOAuthQuery(body, action.request);
+    const response = yield* action.forward(
+      authRequest(action.request, "/api/auth/sign-in/email", body),
+    );
+    if (!response.ok) return response;
 
-  const payload = await responsePayload(response);
-  const location = requiresTwoFactor(payload)
-    ? twoFactorLocation(action.request, payload)
-    : (redirectUrl(payload) ?? sameOriginLocation(action.request, "/"));
-  return redirectWithCookies(response, location);
+    const payload = yield* responsePayload(response);
+    const location = requiresTwoFactor(payload)
+      ? twoFactorLocation(action.request, payload)
+      : (redirectUrl(payload) ?? sameOriginLocation(action.request, "/"));
+    return redirectWithCookies(response, location);
+  });
 }
 
 function twoFactorEndpoint(method: TwoFactorMethod): string {
@@ -169,26 +172,26 @@ function twoFactorEndpoint(method: TwoFactorMethod): string {
     : "/api/auth/two-factor/verify-backup-code";
 }
 
-export async function handleTwoFactorPageAction(
-  action: PublicPageAction,
-): Promise<Response> {
-  const form = await readForm(action.request);
-  if (form instanceof Response) return form;
-  const method = formString(form, "factor");
-  const code = formString(form, "code")?.trim();
-  if ((method !== "totp" && method !== "recovery") || !code) {
-    return errorResponse("A valid two-factor method and code are required.");
-  }
+export function handleTwoFactorPageAction(action: PublicPageAction) {
+  return Effect.gen(function* () {
+    const form = yield* readForm(action.request);
+    if (form instanceof Response) return form;
+    const method = formString(form, "factor");
+    const code = formString(form, "code")?.trim();
+    if ((method !== "totp" && method !== "recovery") || !code) {
+      return errorResponse("A valid two-factor method and code are required.");
+    }
 
-  const body: Record<string, boolean | string> = { code };
-  appendOAuthQuery(body, action.request);
-  const response = await action.forward(
-    authRequest(action.request, twoFactorEndpoint(method), body),
-  );
-  if (!response.ok) return response;
+    const body: Record<string, boolean | string> = { code };
+    appendOAuthQuery(body, action.request);
+    const response = yield* action.forward(
+      authRequest(action.request, twoFactorEndpoint(method), body),
+    );
+    if (!response.ok) return response;
 
-  const payload = await responsePayload(response);
-  const location =
-    redirectUrl(payload) ?? sameOriginLocation(action.request, "/");
-  return redirectWithCookies(response, location);
+    const payload = yield* responsePayload(response);
+    const location =
+      redirectUrl(payload) ?? sameOriginLocation(action.request, "/");
+    return redirectWithCookies(response, location);
+  });
 }

@@ -1,30 +1,13 @@
-import { errorMessage } from "../lib/two-factor.js";
-import { elementFinder, requestJSON } from "./browser.js";
+import { elementFinder } from "./browser.js";
 
-export const required = elementFinder("Two-factor setup");
+export const required = elementFinder("Account security");
 
 export function containingDialog(form: HTMLFormElement): HTMLDialogElement {
   const dialog = form.closest("dialog");
   if (!(dialog instanceof HTMLDialogElement)) {
-    throw new Error("Two-factor forms must be inside dialogs.");
+    throw new Error("Security forms must be inside dialogs.");
   }
   return dialog;
-}
-
-export async function postJSON(
-  endpoint: string,
-  body: object,
-): Promise<unknown> {
-  return requestJSON(endpoint, {
-    body,
-    failureMessage: (value, response) =>
-      response.status === 401
-        ? "Your session expired. Sign in again before changing two-factor authentication."
-        : errorMessage(
-            value,
-            "The security change could not be completed. Try again.",
-          ),
-  });
 }
 
 export function formValue(form: HTMLFormElement, name: string): string {

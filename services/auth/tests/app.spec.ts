@@ -2,15 +2,19 @@ import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import { createApp } from "../src/app.js";
 
-function forwardedRequestHandler(request: Request): Response {
+function forwardedRequestHandler(request: Request): Effect.Effect<Response> {
   const url = new URL(request.url);
   if (url.pathname === "/api/auth/two-factor/methods") {
-    return Response.json({
-      twoFactorMethods: ["totp"],
-      twoFactorRedirect: true,
-    });
+    return Effect.succeed(
+      Response.json({
+        twoFactorMethods: ["totp"],
+        twoFactorRedirect: true,
+      }),
+    );
   }
-  return Response.json({ method: request.method, path: url.pathname });
+  return Effect.succeed(
+    Response.json({ method: request.method, path: url.pathname }),
+  );
 }
 
 describe("auth", () => {
@@ -118,10 +122,12 @@ describe("auth", () => {
         "/api/auth/two-factor/verify-totp",
       );
       const passkeyApp = createApp(() =>
-        Response.json({
-          twoFactorMethods: ["passkey"],
-          twoFactorRedirect: true,
-        }),
+        Effect.succeed(
+          Response.json({
+            twoFactorMethods: ["passkey"],
+            twoFactorRedirect: true,
+          }),
+        ),
       );
       const authoritativePasskey = yield* Effect.promise(() =>
         Promise.resolve(passkeyApp.request("/two-factor?method=totp")),
@@ -150,14 +156,16 @@ describe("auth", () => {
       let forwardedRequest: Request | undefined;
       const challengeApp = createApp((request) => {
         forwardedRequest = request;
-        return Response.json(
-          { twoFactorMethods: ["totp"], twoFactorRedirect: true },
-          {
-            headers: {
-              "set-cookie":
-                "better-auth.two_factor=challenge; HttpOnly; Path=/",
+        return Effect.succeed(
+          Response.json(
+            { twoFactorMethods: ["totp"], twoFactorRedirect: true },
+            {
+              headers: {
+                "set-cookie":
+                  "better-auth.two_factor=challenge; HttpOnly; Path=/",
+              },
             },
-          },
+          ),
         );
       });
       const response = yield* Effect.promise(() =>
@@ -222,12 +230,14 @@ describe("auth", () => {
         );
         const verificationApp = createApp((request) => {
           forwardedRequest = request;
-          return Response.json(
-            {
-              redirect: true,
-              url: "chikara://oauth/callback?code=complete",
-            },
-            { headers: responseHeaders },
+          return Effect.succeed(
+            Response.json(
+              {
+                redirect: true,
+                url: "chikara://oauth/callback?code=complete",
+              },
+              { headers: responseHeaders },
+            ),
           );
         });
         const response = yield* Effect.promise(() =>
@@ -292,10 +302,12 @@ describe("auth", () => {
         let forwardedRequest: Request | undefined;
         const consentApp = createApp((request) => {
           forwardedRequest = request;
-          return Response.json({
-            redirect: true,
-            url: "chikara://oauth/callback?result=complete",
-          });
+          return Effect.succeed(
+            Response.json({
+              redirect: true,
+              url: "chikara://oauth/callback?result=complete",
+            }),
+          );
         });
         const response = yield* Effect.promise(() =>
           Promise.resolve(

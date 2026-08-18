@@ -2,7 +2,7 @@
 import Icon from "../../components/Icon.astro";
 import ReadError from "../../components/ReadError.astro";
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import { getUserDetail } from "../../lib/auth.js";
+import { dashboardQueries } from "../../lib/auth.js";
 import {
   formatDate,
   formatDateTime,
@@ -13,7 +13,7 @@ import {
 
 const superuser = Astro.locals.account.user;
 const userId = Astro.params.id ?? "";
-const result = await getUserDetail(Astro.request, userId);
+const result = await dashboardQueries.userDetail(Astro.request, userId);
 const detail = result.data;
 const user = detail?.user;
 const isMissing = result.status === 404;

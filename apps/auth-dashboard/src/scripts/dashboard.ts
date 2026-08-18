@@ -1,4 +1,9 @@
 import { enhancedActionLocation } from "../lib/action-outcome.js";
+import {
+  isOperationName,
+  operationLocation,
+  operationPayload,
+} from "../lib/dashboard-operations.js";
 import { createAuthorizationTestUrl } from "../lib/oauth-test.js";
 import "./dialog.js";
 
@@ -16,32 +21,17 @@ function showToast(
   }, 4200);
 }
 
-async function apiRequest(
-  endpoint: string,
-  method: string,
-  body?: BodyInit,
-): Promise<Record<string, object | string | boolean>> {
-  const response = await fetch(endpoint, {
+async function runOperation(
+  location: string,
+  body: FormData,
+): Promise<Record<string, unknown>> {
+  const response = await fetch(location, {
     body,
     credentials: "include",
     headers: { Accept: "application/json" },
-    method,
+    method: "POST",
   });
-  const parsed: unknown = await response.json().catch(() => ({}));
-  const data: Record<string, object | string | boolean> =
-    parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, object | string | boolean>)
-      : {};
-  if (!response.ok) {
-    const message =
-      typeof data.error === "string"
-        ? data.error
-        : typeof data.message === "string"
-          ? data.message
-          : "The request could not be completed.";
-    throw new Error(message);
-  }
-  return data;
+  return operationPayload(response);
 }
 
 function showCredential(value: string): void {
@@ -138,7 +128,10 @@ document.addEventListener("click", async (event) => {
       name instanceof HTMLInputElement &&
       email instanceof HTMLInputElement
     ) {
-      form.action = `/actions/dashboard/users/${encodeURIComponent(userEditor.dataset.userId)}`;
+      form.action = operationLocation("update-user", {
+        resourceId: userEditor.dataset.userId,
+        returnTo: "/users",
+      });
       name.value = userEditor.dataset.userName;
       email.value = userEditor.dataset.userEmail;
     }
@@ -159,15 +152,19 @@ document.addEventListener("click", async (event) => {
     }
   }
 
-  const action = target.closest<HTMLButtonElement>("[data-endpoint]");
-  if (!action?.dataset.endpoint) return;
+  const action = target.closest<HTMLButtonElement>("[data-operation]");
+  const operation = action?.dataset.operation;
+  if (!action || !operation || !isOperationName(operation)) return;
   const confirmation = action.dataset.confirm;
   if (confirmation && !window.confirm(confirmation)) return;
   action.disabled = true;
   try {
-    const data = await apiRequest(
-      action.dataset.endpoint,
-      action.dataset.method ?? "POST",
+    const data = await runOperation(
+      operationLocation(operation, {
+        resourceId: action.dataset.resourceId,
+        returnTo: action.dataset.next ?? window.location.pathname,
+      }),
+      new FormData(),
     );
     if (typeof data.credential === "string" && data.credential)
       showCredential(data.credential);
@@ -190,7 +187,7 @@ document.addEventListener("submit", async (event) => {
   const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
   if (submit) submit.disabled = true;
   try {
-    const data = await apiRequest(form.action, "POST", new FormData(form));
+    const data = await runOperation(form.action, new FormData(form));
     if (typeof data.credential === "string" && data.credential)
       showCredential(data.credential);
     else

@@ -1,6 +1,7 @@
+import type { TwoFactorState } from "../account-protection.js";
 import type { AuthEventPage } from "../auth-audit/auth-audit.models.js";
-import type { TwoFactorState } from "../two-factor.state.js";
 
+export type { TwoFactorState } from "../account-protection.js";
 export type {
   AuthEvent,
   AuthEventCursor,
@@ -8,7 +9,6 @@ export type {
   AuthEventType,
 } from "../auth-audit/auth-audit.models.js";
 export { authEventTypes } from "../auth-audit/auth-audit.models.js";
-export type { TwoFactorState } from "../two-factor.state.js";
 
 export interface DashboardUser {
   readonly createdAt: number | string;

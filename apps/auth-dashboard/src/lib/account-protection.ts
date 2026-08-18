@@ -1,9 +1,6 @@
 import type { TwoFactorState } from "./models.js";
 
-export const authenticatorStateChangedEvent =
-  "otakuma:authenticator-state-changed";
-
-interface AccountProtection {
+export interface AccountProtection {
   readonly badge: "Enabled" | "Not enabled";
   readonly message: string;
   readonly tone: "ready" | "warning";
@@ -15,8 +12,8 @@ export function accountProtection(
 ): AccountProtection {
   const hasPasskey = passkeyCount > 0;
   const hasAuthenticator = authenticatorState === "enabled";
+  const passkeys = passkeyCount === 1 ? "passkey" : "passkeys";
   if (hasPasskey && hasAuthenticator) {
-    const passkeys = passkeyCount === 1 ? "passkey" : "passkeys";
     return {
       badge: "Enabled",
       message: `Your ${passkeys} and authenticator codes can verify password sign-ins.`,
@@ -24,10 +21,9 @@ export function accountProtection(
     };
   }
   if (hasPasskey) {
-    const passkey = passkeyCount === 1 ? "passkey" : "passkeys";
     return {
       badge: "Enabled",
-      message: `Your ${passkey} ${passkeyCount === 1 ? "protects" : "protect"} password sign-ins and can also sign you in directly when your device verifies you.`,
+      message: `Your ${passkeys} ${passkeyCount === 1 ? "protects" : "protect"} password sign-ins and can also sign you in directly when your device verifies you.`,
       tone: "ready",
     };
   }

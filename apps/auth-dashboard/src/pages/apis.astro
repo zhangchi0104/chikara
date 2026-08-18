@@ -4,11 +4,12 @@ import EmptyState from "../components/EmptyState.astro";
 import Icon from "../components/Icon.astro";
 import ReadError from "../components/ReadError.astro";
 import DashboardLayout from "../layouts/DashboardLayout.astro";
-import { getApis } from "../lib/auth.js";
+import { dashboardQueries } from "../lib/auth.js";
+import { operationLocation } from "../lib/dashboard-operations.js";
 import { formatDate, type Api } from "../lib/models.js";
 
 const superuser = Astro.locals.account.user;
-const result = await getApis(Astro.request);
+const result = await dashboardQueries.apis(Astro.request);
 const loadFailed = !result.data;
 const apis: ReadonlyArray<Api> = result.data ?? [];
 const selectedId = Astro.url.searchParams.get("selected") ?? apis[0]?.id;
@@ -38,7 +39,7 @@ const selected = apis.find((api) => api.id === selectedId);
             <div><h2>{selected.name}</h2><p>{selected.description || "No description added."}</p></div>
             <div class="button-row">
               <button class="button button-small" type="button" data-open-dialog={`edit-api-${selected.id}`}>Edit</button>
-              <button class="button button-small button-danger" type="button" data-endpoint={`/api/dashboard/apis/${selected.id}`} data-method="DELETE" data-confirm={`Delete ${selected.name}? This is only possible after its Applications are moved or deleted.`}>Delete</button>
+              <button class="button button-small button-danger" type="button" data-operation="delete-api" data-resource-id={selected.id} data-confirm={`Delete ${selected.name}? This is only possible after its Applications are moved or deleted.`}>Delete</button>
             </div>
           </header>
           <section class="detail-section">
@@ -61,8 +62,7 @@ const selected = apis.find((api) => api.id === selectedId);
   )}
 
   <Dialog id="create-api" title="Create API" description="Define the audience your Applications will request.">
-    <form action="/actions/dashboard/apis" method="post" data-enhance>
-      <input type="hidden" name="_returnTo" value="/apis" />
+    <form action={operationLocation("create-api", { returnTo: "/apis" })} method="post" data-enhance>
       <label class="field"><span>Name</span><input name="name" required maxlength="100" placeholder="Core API" /></label>
       <label class="field"><span>Identifier</span><input name="identifier" type="url" required placeholder="https://api.example.com" /><small>This becomes the OAuth audience and must be unique.</small></label>
       <label class="field"><span>Description</span><textarea name="description" maxlength="500" placeholder="What this API protects"></textarea></label>
@@ -71,9 +71,7 @@ const selected = apis.find((api) => api.id === selectedId);
   </Dialog>
   {selected && (
     <Dialog id={`edit-api-${selected.id}`} title="Edit API" description="Changes to the identifier may require Application updates.">
-      <form action={`/actions/dashboard/apis/${selected.id}`} method="post" data-enhance>
-        <input type="hidden" name="_method" value="PATCH" />
-        <input type="hidden" name="_returnTo" value={`/apis?selected=${selected.id}`} />
+      <form action={operationLocation("update-api", { resourceId: selected.id, returnTo: `/apis?selected=${selected.id}` })} method="post" data-enhance>
         <label class="field"><span>Name</span><input name="name" value={selected.name} required maxlength="100" /></label>
         <label class="field"><span>Identifier</span><input name="identifier" type="url" value={selected.identifier} required /></label>
         <label class="field"><span>Description</span><textarea name="description" maxlength="500">{selected.description}</textarea></label>
